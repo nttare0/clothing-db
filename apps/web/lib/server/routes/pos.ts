@@ -94,7 +94,10 @@ movementRoutes.get("/", requireAuth, requirePermission("movements.view"), async 
   const search = (params.get("search") ?? "").trim().toLowerCase();
   const type = params.get("type") ?? "all";
   const page = Math.max(1, Number(params.get("page") ?? "1") || 1);
-  const pageSize = Math.min(100, Math.max(1, Number(params.get("pageSize") ?? "30") || 30));
+  const limitParam = params.get("limit"); // convenience for embedded widgets (e.g. product detail)
+  const pageSize = limitParam
+    ? Math.min(100, Math.max(1, Number(limitParam) || 30))
+    : Math.min(100, Math.max(1, Number(params.get("pageSize") ?? "30") || 30));
   const offset = (page - 1) * pageSize;
   const like = `%${search}%`;
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reference);
