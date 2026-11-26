@@ -27,6 +27,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // postgres.js must run in the Node runtime, never bundled for the edge/client.
+  serverExternalPackages: ["postgres"],
   turbopack: {
     rules: {
       "*.css": {
@@ -38,10 +40,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
-  async rewrites() {
-    const api = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
-    return [{ source: "/api/:path*", destination: `${api}/api/:path*` }];
-  },
+  // /api/* is served same-origin by app/api/[...path]/route.ts (no rewrite needed).
 };
 
 export default nextConfig;

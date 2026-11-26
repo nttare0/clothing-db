@@ -17,8 +17,11 @@ cp .env.example .env.local
 npm run dev
 ```
 
-The web app expects the ClothFlow API on `API_INTERNAL_URL` (default `http://localhost:4000`).
-`/api/*` is proxied by a Next.js rewrite; the browser only ever talks to the same origin.
+The app and the API share one deployment: `/api/*` is served same-origin by
+`app/api/[...path]/route.ts`, which runs the Hono application from `lib/server/`
+on the Node runtime. The browser only ever talks to the same origin (no CORS,
+first-party session cookie). `DATABASE_URL` is required in production and is set
+in the Vercel project environment — never commit it.
 
 ## Structure
 
@@ -29,6 +32,9 @@ The web app expects the ClothFlow API on `API_INTERNAL_URL` (default `http://loc
 - `components/app-shell.tsx` — navigation shell (desktop sidebar, mobile drawer, top bar).
 - `components/ui/` — shadcn/ui component primitives (base-ui).
 - `lib/api.ts` — same-origin fetch wrapper; typed `ApiError`; RWF + date formatting.
+- `app/api/[...path]/route.ts` — API entry point (Hono on Node runtime).
+- `lib/server/` — the ClothFlow API: auth (scrypt + hashed session cookies), catalogue,
+  stock-in with moving-average cost, idempotent sales with row locking, dashboard, notifications.
 
 Stage locks: screens from later build stages (Returns, Adjustments, Stock Count,
 Suppliers, Customers, Expenses, Reports, Staff & Permissions, Audit Logs, Settings)

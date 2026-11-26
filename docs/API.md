@@ -48,6 +48,7 @@ with row locking and idempotency keys.
 
 ## Deployment
 
-Deployed as a Vercel project rooted at `apps/api` with zero-config TS functions
-(`api/[...slug].ts` catch-all). The web app proxies `/api/*` to this service
-via its `API_INTERNAL_URL` env var (same-origin cookies, no CORS).
+The API ships inside the web deployment (`apps/web/app/api/[...path]/route.ts`)
+on the Node.js runtime — same origin as the UI, first-party session cookie, no CORS.
+Shared logic lives in `apps/web/lib/server/` (Hono application, `DATABASE_URL`-backed
+via `postgres.js`). `DATABASE_URL` is set in the Vercel project environment.
