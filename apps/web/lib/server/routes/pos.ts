@@ -92,7 +92,9 @@ movementRoutes.get("/", requireAuth, requirePermission("movements.view"), async 
   const productId = params.get("productId") ?? "";
   const reference = (params.get("reference") ?? "").trim();
   const search = (params.get("search") ?? "").trim().toLowerCase();
-  const type = params.get("type") ?? "all";
+  const typeRaw = params.get("type") ?? "all";
+  const parsed = typeRaw === "all" ? [] : typeRaw.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 9);
+  const typeList = parsed.length > 0 ? parsed : null;
   const page = Math.max(1, Number(params.get("page") ?? "1") || 1);
   const limitParam = params.get("limit"); // convenience for embedded widgets (e.g. product detail)
   const pageSize = limitParam
@@ -126,7 +128,7 @@ movementRoutes.get("/", requireAuth, requirePermission("movements.view"), async 
     LEFT JOIN users u ON u.id = m.actor_id
     WHERE
       (${productId || null}::uuid IS NULL OR p.id = ${productId || null}::uuid)
-      AND (${type === "all" ? null : type}::text IS NULL OR m.movement_type = ${type === "all" ? null : type}::text)
+      AND (${typeList === null} OR m.movement_type = ANY(${typeList ?? []}))
       AND (
         ${reference === "" ? null : reference}::text IS NULL
         OR lower(COALESCE(m.reference, '')) LIKE ${`%${reference.toLowerCase()}%`}
@@ -149,7 +151,7 @@ movementRoutes.get("/", requireAuth, requirePermission("movements.view"), async 
     JOIN products p ON p.id = v.product_id
     WHERE
       (${productId || null}::uuid IS NULL OR p.id = ${productId || null}::uuid)
-      AND (${type === "all" ? null : type}::text IS NULL OR m.movement_type = ${type === "all" ? null : type}::text)
+      AND (${typeList === null} OR m.movement_type = ANY(${typeList ?? []}))
       AND (
         ${reference === "" ? null : reference}::text IS NULL
         OR lower(COALESCE(m.reference, '')) LIKE ${`%${reference.toLowerCase()}%`}

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://clothflow.vercel.app";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://clothflow-web.vercel.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -18,12 +18,22 @@ export const metadata: Metadata = {
     url: siteUrl,
     siteName: "ClothFlow",
     type: "website",
+    locale: "en_RW",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 960,
+        height: 640,
+        alt: "ClothFlow — clothing store operations, inventory and point of sale",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "ClothFlow — Clothing Store Management",
     description:
       "One store. Clear stock. Confident decisions. Catalogue, inventory, purchasing, POS, returns and reporting for a single clothing store.",
+    images: ["/og-image.jpg"],
   },
   robots: { index: false, follow: false },
 };

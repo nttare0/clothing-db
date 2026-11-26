@@ -14,7 +14,13 @@ export type Permission =
   | "profile"
   | "staff.manage"
   | "settings.manage"
-  | "audit.view";
+  | "audit.view"
+  | "returns.process"
+  | "adjustments.manage"
+  | "counts.manage"
+  | "expenses.manage"
+  | "suppliers.manage"
+  | "customers.manage";
 
 const ALL: Permission[] = [
   "dashboard",
@@ -30,6 +36,12 @@ const ALL: Permission[] = [
   "staff.manage",
   "settings.manage",
   "audit.view",
+  "returns.process",
+  "adjustments.manage",
+  "counts.manage",
+  "expenses.manage",
+  "suppliers.manage",
+  "customers.manage",
 ];
 
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
@@ -45,6 +57,12 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "reports.view",
     "notifications",
     "profile",
+    "returns.process",
+    "adjustments.manage",
+    "counts.manage",
+    "expenses.manage",
+    "suppliers.manage",
+    "customers.manage",
   ],
   stock_clerk: [
     "dashboard",
@@ -54,8 +72,17 @@ const ROLE_PERMISSIONS: Record<string, Permission[]> = {
     "movements.view",
     "notifications",
     "profile",
+    "counts.manage",
   ],
-  cashier: ["dashboard", "pos.sale", "sales.view", "notifications", "profile"],
+  cashier: [
+    "dashboard",
+    "pos.sale",
+    "sales.view",
+    "notifications",
+    "profile",
+    "returns.process",
+    "customers.manage",
+  ],
 };
 
 export function roleCan(role: string, permission: Permission): boolean {

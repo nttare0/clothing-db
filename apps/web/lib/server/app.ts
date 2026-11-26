@@ -8,6 +8,12 @@ import { salesRoutes } from "./routes/sales";
 import { stockRoutes } from "./routes/stock";
 import { dashboardRoutes } from "./routes/dashboard";
 import { notificationRoutes } from "./routes/notifications";
+import { returnsRoutes } from "./routes/returns";
+import { adjustmentRoutes, countRoutes } from "./routes/adjustments";
+import { customerRoutes, supplierRoutes } from "./routes/people";
+import { expenseRoutes } from "./routes/expenses";
+import { reportRoutes } from "./routes/reports";
+import { auditRoutes, settingsRoutes, staffRoutes } from "./routes/admin";
 
 export function createApp() {
   const app = new Hono().basePath("/api");
@@ -56,6 +62,16 @@ export function createApp() {
   app.route("/sales", salesRoutes);
   app.route("/dashboard", dashboardRoutes);
   app.route("/notifications", notificationRoutes);
+  app.route("/returns", returnsRoutes);
+  app.route("/adjustments", adjustmentRoutes);
+  app.route("/stock-counts", countRoutes);
+  app.route("/suppliers", supplierRoutes);
+  app.route("/customers", customerRoutes);
+  app.route("/expenses", expenseRoutes);
+  app.route("/reports", reportRoutes);
+  app.route("/staff", staffRoutes);
+  app.route("/audit-logs", auditRoutes);
+  app.route("/settings", settingsRoutes);
 
   return app;
 }
