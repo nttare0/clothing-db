@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+dist/
+build/
+coverage/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Framework / tooling caches
+.vercel
+*.tsbuildinfo
+.cache/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
