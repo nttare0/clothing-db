@@ -1,0 +1,23 @@
+{
+  "name": "clothflow-api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ClothFlow 1.0 API - server-side business logic for the single-store clothing system. PostgreSQL via Supabase; RWF; immutable stock ledger.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.7.6",
+    "hono": "^4.11.7",
+    "postgres": "^3.4.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}
