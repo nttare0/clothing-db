@@ -17,7 +17,7 @@ const supplierBody = z.object({
   notes: z.string().trim().max(1000).nullable().optional(),
 });
 
-supplierRoutes.get("/", requireAuth, async (c) => {
+supplierRoutes.get("/", requireAuth, requirePermission("suppliers.manage"), async (c) => {
   const params = new URL(c.req.url).searchParams;
   const search = (params.get("search") ?? "").trim().toLowerCase();
   const includeArchived = params.get("includeArchived") === "1";
@@ -107,7 +107,7 @@ supplierRoutes.patch(
   },
 );
 
-supplierRoutes.get("/:id/purchases", requireAuth, async (c) => {
+supplierRoutes.get("/:id/purchases", requireAuth, requirePermission("suppliers.manage"), async (c) => {
   const id = c.req.param("id");
   const rows = await sql`
     SELECT pu.id, pu.reference, pu.reason, pu.received_at, pu.total_cost::text, u.name AS received_by

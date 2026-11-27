@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import { getDemoState } from "@/lib/server/demo";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -59,12 +60,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   } catch (err) {
     console.error("root_demo_state_failed", err);
   }
+  // Nonce for the per-request Content-Security-Policy (set in middleware.ts).
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange nonce={nonce}>
           {demoActive ? (
-            <script dangerouslySetInnerHTML={{ __html: "window.__CLOTHFLOW_DEMO__=true" }} />
+            <script nonce={nonce} dangerouslySetInnerHTML={{ __html: "window.__CLOTHFLOW_DEMO__=true" }} />
           ) : null}
           {children}
         </ThemeProvider>

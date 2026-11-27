@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { sql } from "../db";
-import { fail, ok, requireAuth, requirePermission } from "../http";
+import { ok, requireAuth, requirePermission } from "../http";
 
 // ---------- POS search ----------
 export const posRoutes = new Hono();
@@ -50,7 +50,7 @@ posRoutes.get("/search", requireAuth, requirePermission("pos.sale"), async (c) =
 // Variant lookup for the stock-in prefill flow (?variantId=...)
 export const variantsRoutes = new Hono();
 
-variantsRoutes.get("/lookup", requireAuth, async (c) => {
+variantsRoutes.get("/lookup", requireAuth, requirePermission("stock.receive"), async (c) => {
   const variantId = new URL(c.req.url).searchParams.get("variantId") ?? "";
   if (!/^[0-9a-f-]{36}$/i.test(variantId)) return ok(c, []);
   const rows = await sql<

@@ -214,6 +214,10 @@ authRoutes.post(
   ),
   async (c) => {
     const { token, password } = c.req.valid("json");
+    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (!rateLimit(`reset:${ip}`, 10, 15 * 60_000)) {
+      return fail(c, 429, "RATE_LIMITED", "Too many attempts. Try again later.");
+    }
     const rows = await sql<{ id: string; user_id: string; expires_at: Date; used_at: Date | null }[]>`
       SELECT id, user_id, expires_at, used_at FROM password_reset_tokens
       WHERE token_hash = ${hashToken(token)} LIMIT 1

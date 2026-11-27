@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { sql } from "../db";
 import { audit, fail, ok, requireAuth, requirePermission } from "../http";
+import { roleCan } from "../permissions";
 import { zValidator } from "@hono/zod-validator";
 import { hook } from "../validate";
 
@@ -139,7 +140,12 @@ type ProductDetailRow = {
   category: string | null;
 };
 
-async function fetchProductDetail(id: string) {
+function canSeeCost(role: string): boolean {
+  // Owner, Manager, Stock Clerk can see cost; Cashier cannot.
+  return roleCan(role, "stock.receive");
+}
+
+async function fetchProductDetail(id: string, canViewCost: boolean) {
   const products = await sql<ProductDetailRow[]>`
     SELECT p.id, p.name, p.brand, p.description, p.status, p.created_at, cat.name AS category
     FROM products p
@@ -196,7 +202,8 @@ async function fetchProductDetail(id: string) {
         size: v.size,
         colour: v.colour,
         sellingPrice: v.selling_price === null ? null : Number(v.selling_price),
-        movingAverageCost: Number(v.moving_average_cost),
+        // Cost data is restricted to roles that can see/receive stock; never sent to cashiers.
+        movingAverageCost: canViewCost ? Number(v.moving_average_cost) : null,
         onHand: v.quantity_on_hand,
         sellable,
         damaged: v.quantity_damaged,
@@ -359,7 +366,7 @@ productRoutes.post(
 );
 
 productRoutes.get("/:id", requireAuth, async (c) => {
-  const detail = await fetchProductDetail(c.req.param("id"));
+  const detail = await fetchProductDetail(c.req.param("id"), canSeeCost(c.get("user").role));
   if (!detail) return fail(c, 404, "NOT_FOUND", "Product not found.");
   return ok(c, detail);
 });
@@ -414,7 +421,7 @@ productRoutes.patch(
       });
 
       await audit(user.id, "product.update", "product", id, { requestId: c.get("requestId") });
-      const detail = await fetchProductDetail(id);
+      const detail = await fetchProductDetail(id, canSeeCost(user.role));
       return ok(c, detail);
     } catch (err: unknown) {
       const mapped = mapConstraintError(err);
@@ -432,7 +439,7 @@ productRoutes.post("/:id/deactivate", requireAuth, requirePermission("products.m
   return ok(c, { ok: true });
 });
 
-productRoutes.get("/:id/movements", requireAuth, async (c) => {
+productRoutes.get("/:id/movements", requireAuth, requirePermission("movements.view"), async (c) => {
   // Convenience endpoint mirroring the front-end's product-scoped movement fetch.
   const id = c.req.param("id");
   const rows = await sql`
