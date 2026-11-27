@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { getDemoState } from "@/lib/server/demo";
+import { ThemeProvider } from "@/components/theme-provider";
 
 // Every route renders on demand: the demo flag must be fresh per request
 // and never baked into statically prerendered HTML.
@@ -59,12 +60,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     console.error("root_demo_state_failed", err);
   }
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
-        {demoActive ? (
-          <script dangerouslySetInnerHTML={{ __html: "window.__CLOTHFLOW_DEMO__=true" }} />
-        ) : null}
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {demoActive ? (
+            <script dangerouslySetInnerHTML={{ __html: "window.__CLOTHFLOW_DEMO__=true" }} />
+          ) : null}
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ScrollTextIcon, SearchIcon, ChevronRightIcon } from "lucide-react";
+import { ScrollTextIcon, ChevronRightIcon } from "lucide-react";
 import { api, ApiError, formatDateTime } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { ErrorAlert, EmptyState } from "@/components/state";
 import { RoleGate } from "@/components/role-gate";
+import { SearchInput } from "@/components/search-input";
 
 type AuditRow = {
   id: string;
@@ -63,7 +64,7 @@ export default function AuditLogsPage() {
     api<{ items: AuditRow[]; total: number }>(`/audit-logs?${q.toString()}`)
       .then(setData)
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load audit logs."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the audit log. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [query, from, to, page]);
@@ -97,10 +98,13 @@ export default function AuditLogsPage() {
         </div>
 
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <div className="relative flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input type="search" aria-label="Search audit log" placeholder="Search action, entity or staff name…" className="pl-9" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
-          </div>
+          <SearchInput
+            className="flex-1"
+            ariaLabel="Search audit log"
+            placeholder="Search action, entity or staff name…"
+            value={query}
+            onChange={(v) => { setQuery(v); setPage(1); }}
+          />
           <Input type="date" aria-label="From date" value={from} onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
           <Input type="date" aria-label="To date" value={to} onChange={(e) => { setTo(e.target.value); setPage(1); }} />
         </div>

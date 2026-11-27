@@ -194,7 +194,7 @@ authRoutes.post(
       });
       if (!res.ok) {
         console.error("resend_failed", res.status, await res.text());
-        return fail(c, 503, "EMAIL_UNAVAILABLE", "Could not send the reset email. Try again later.");
+        return fail(c, 503, "EMAIL_UNAVAILABLE", "We couldn't send the email. Try again, or ask the store owner to reset your password.");
       }
     }
 

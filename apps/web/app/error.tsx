@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import Image from "next/image";
-import { RefreshCwIcon, HomeIcon, AlertTriangleIcon } from "lucide-react";
+import Link from "next/link";
+import { RefreshCwIcon, HomeIcon } from "lucide-react";
 import { errorReference, isChunkError, reloadOnceForChunkError } from "@/lib/error-reference";
 
 export default function Error({
@@ -34,7 +35,7 @@ export default function Error({
       />
       <div className="flex w-full max-w-md flex-col items-center gap-2">
         <h1 className="text-xl font-semibold tracking-tight">
-          {chunk ? "ClothFlow was just updated" : "Something went wrong"}
+          {chunk ? "ClothFlow was just updated" : "Oh dear — something went wrong"}
         </h1>
         {chunk ? (
           <p className="text-sm text-muted-foreground">
@@ -42,16 +43,15 @@ export default function Error({
           </p>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">The page hit an unexpected error. Your work in other tabs is safe.</p>
-            <div
-              role="alert"
-              className="flex w-full items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-left"
-            >
-              <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-              <p className="min-w-0 break-words font-mono text-xs leading-relaxed text-destructive">{message}</p>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              If this keeps happening, quote this reference to support:{" "}
+            <p className="text-sm text-muted-foreground">Don&apos;t worry — your other screens are unaffected, and nothing was saved twice.</p>
+            <details className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 text-left">
+              <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                Details for the store administrator
+              </summary>
+              <p className="mt-1.5 break-words font-mono text-[11px] leading-relaxed text-destructive">{message}</p>
+            </details>
+            <p className="text-[11px] text-muted-foreground">
+              Keeps happening? Show your store administrator this reference:{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{reference}</code>
             </p>
           </>
@@ -73,12 +73,12 @@ export default function Error({
             <RefreshCwIcon className="size-4" aria-hidden /> Try again
           </button>
         )}
-        <a
-          href="/dashboard"
+        <Link
+          href="/"
           className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-muted"
         >
           <HomeIcon className="size-4" aria-hidden /> Dashboard
-        </a>
+        </Link>
       </div>
     </main>
   );

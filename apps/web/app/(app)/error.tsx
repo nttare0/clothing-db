@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Image from "next/image";
-import { RefreshCwIcon, AlertTriangleIcon, HomeIcon } from "lucide-react";
+import { RefreshCwIcon, HomeIcon } from "lucide-react";
 import { errorReference, isChunkError, reloadOnceForChunkError } from "@/lib/error-reference";
 
 /** Error boundary for the authenticated app shell area. */
@@ -34,7 +34,7 @@ export default function AppError({
       />
       <div className="flex w-full max-w-md flex-col items-center gap-2">
         <h1 className="text-xl font-semibold tracking-tight">
-          {chunk ? "ClothFlow was just updated" : "This screen couldn\u2019t load"}
+          {chunk ? "ClothFlow was just updated" : "Oh dear — this screen hit a snag"}
         </h1>
         {chunk ? (
           <p className="text-sm text-muted-foreground">
@@ -42,16 +42,15 @@ export default function AppError({
           </p>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">Your data is safe — the screen hit an unexpected error.</p>
-            <div
-              role="alert"
-              className="flex w-full items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-left"
-            >
-              <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-              <p className="min-w-0 break-words font-mono text-xs leading-relaxed text-destructive">{message}</p>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Try again — if it fails twice, quote this reference to your administrator:{" "}
+            <p className="text-sm text-muted-foreground">Don&apos;t worry — your data is safe, and nothing was saved twice.</p>
+            <details className="w-full rounded-lg border border-border bg-muted/40 px-3 py-2 text-left">
+              <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                Details for the store administrator
+              </summary>
+              <p className="mt-1.5 break-words font-mono text-[11px] leading-relaxed text-destructive">{message}</p>
+            </details>
+            <p className="text-[11px] text-muted-foreground">
+              Keeps happening? Show your store administrator this reference:{" "}
               <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px]">{reference}</code>
             </p>
           </>

@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeftIcon, PackagePlusIcon, ScanBarcodeIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import { ArrowLeftIcon, PackagePlusIcon, ScanBarcodeIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorAlert } from "@/components/state";
+import { SearchInput } from "@/components/search-input";
 
 type Option = {
   variantId: string;
@@ -132,7 +133,7 @@ function StockInForm() {
       toast.success("Stock received", { description: "Quantities are available for sale immediately." });
       window.location.assign(`/stock-movements?reference=${result.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save the receipt. Try again.");
+      setError(err instanceof ApiError ? err.message : "We couldn't save the receipt. Nothing was recorded — please try again.");
       setPending(false);
     }
   }
@@ -157,17 +158,13 @@ function StockInForm() {
           <CardDescription>Scan a barcode or search by product name / SKU.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <div className="relative">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              aria-label="Search products to add"
-              autoFocus
-              placeholder="Scan barcode or search…"
-              className="pl-9"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            ariaLabel="Search products to add"
+            autoFocus
+            placeholder="Scan barcode or search…"
+            value={query}
+            onChange={setQuery}
+          />
           {results.length > 0 ? (
             <ul className="flex flex-col gap-1.5 rounded-xl border border-border p-2">
               {results.map((r) => (

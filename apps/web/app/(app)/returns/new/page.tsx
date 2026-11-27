@@ -92,7 +92,7 @@ function ReturnForm() {
         setDisposition(Object.fromEntries(d.items.map((i) => [i.saleItemId, "resellable"])));
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load return eligibility."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the sales for a return. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [saleId]);
@@ -129,7 +129,7 @@ function ReturnForm() {
       setDone({ refundTotal: result.refundTotal });
       toast.success(`Return recorded — refund ${formatRWF(result.refundTotal)}`);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not record the return. Retry.");
+      setFormError(err instanceof ApiError ? err.message : "We couldn't record the return. Nothing was refunded yet — please try again.");
     } finally {
       setPending(false);
     }

@@ -96,7 +96,7 @@ export default function StaffPage() {
       setExpiry(null);
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Could not set the active period.");
+      toast.error(err instanceof ApiError ? err.message : "We couldn't set the active period. Please try again.");
     } finally {
       setExpiryPending(false);
     }
@@ -113,7 +113,7 @@ export default function StaffPage() {
     api<{ items: StaffMember[] }>("/staff")
       .then((r) => setItems(r.items))
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load staff."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the staff list. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -139,7 +139,7 @@ export default function StaffPage() {
       setForm({ name: "", email: "", role: "cashier" });
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not create the account.");
+      setFormError(err instanceof ApiError ? err.message : "We couldn't create the account. Please try again.");
     } finally {
       setPending(false);
     }
@@ -151,7 +151,7 @@ export default function StaffPage() {
       toast.success(`${user.name} is now ${ROLE_LABELS[role] ?? role}`);
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Could not change the role.");
+      toast.error(err instanceof ApiError ? err.message : "We couldn't change the role. Please try again.");
     }
   }
 
@@ -175,7 +175,7 @@ export default function StaffPage() {
       }
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Action failed.");
+      toast.error(err instanceof ApiError ? err.message : "That didn't work. Please try again.");
     } finally {
       setConfirm(null);
     }

@@ -70,7 +70,7 @@ notificationRoutes.post("/read-all", requireAuth, async (c) => {
 notificationRoutes.delete("/:id", requireAuth, async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return fail(c, 400, "VALIDATION", "Invalid notification id.");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return fail(c, 400, "VALIDATION", "We couldn't find that notification. Refresh the page and try again.");
   await sql`
     INSERT INTO notification_state (user_id, notification_id, dismissed_at)
     VALUES (${user.id}, ${id}, now())

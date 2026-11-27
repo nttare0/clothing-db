@@ -3,12 +3,11 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { SearchIcon, PlusIcon, ShirtIcon } from "lucide-react";
+import { PlusIcon, ShirtIcon } from "lucide-react";
 import { api, ApiError, formatRWF } from "@/lib/api";
 import { buttonVariants } from "@/components/ui/button";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ErrorAlert, EmptyState } from "@/components/state";
+import { SearchInput } from "@/components/search-input";
 
 type ProductRow = {
   id: string;
@@ -100,7 +100,7 @@ function InventoryView() {
         setTotal(r.total);
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load products."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the products. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [search, categoryId, status, lowStock, page]);
@@ -130,17 +130,13 @@ function InventoryView() {
 
       {/* Filters */}
       <form onSubmit={onSearchSubmit} className="flex flex-col gap-2 md:flex-row md:items-center">
-        <div className="relative flex-1">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <Input
-            type="search"
-            aria-label="Search products by name, SKU or barcode"
-            placeholder="Search name, SKU or barcode…"
-            className="pl-9"
-            value={searchDraft}
-            onChange={(e) => setSearchDraft(e.target.value)}
-          />
-        </div>
+        <SearchInput
+          className="flex-1"
+          ariaLabel="Search products by name, SKU or barcode"
+          placeholder="Search name, SKU or barcode…"
+          value={searchDraft}
+          onChange={setSearchDraft}
+        />
         <div className="flex flex-wrap items-center gap-2">
           <NativeSelect
             aria-label="Filter by category"

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  SearchIcon,
   ScanBarcodeIcon,
   PlusIcon,
   MinusIcon,
@@ -23,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { ErrorAlert } from "@/components/state";
+import { SearchInput } from "@/components/search-input";
 
 type SearchResult = {
   variantId: string;
@@ -187,13 +187,13 @@ export default function PosPage() {
       if (err instanceof ApiError) {
         if (err.status === 0 || err.status >= 500) {
           setError(
-            "We could not confirm the sale. Check Sales history for a receipt before trying again — resubmitting could create a duplicate.",
+            "We couldn't confirm the sale went through. Please check Sales history for a receipt before trying again — if it isn't listed, try again.",
           );
         } else {
           setError(err.message);
         }
       } else {
-        setError("We could not confirm the sale. Check Sales history before trying again.");
+        setError("We couldn't confirm the sale went through. Please check Sales history before trying again.");
       }
     } finally {
       setSubmitting(false);
@@ -428,21 +428,16 @@ export default function PosPage() {
     <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-7xl flex-col gap-3 p-3 sm:p-4 lg:flex-row">
       {/* Catalogue side */}
       <div className={`flex min-h-0 flex-1 flex-col gap-3 ${mobileView === "cart" ? "hidden lg:flex" : "flex"}`}>
-        <div className="relative">
-          <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <Input
-            ref={searchRef}
-            autoFocus
-            type="text"
-            inputMode="search"
-            aria-label="Search or scan barcode"
-            placeholder="Scan barcode or search product / SKU…"
-            className="h-12 pl-11 text-base"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onSearchKeyDown}
-          />
-        </div>
+        <SearchInput
+          size="lg"
+          inputRef={searchRef}
+          autoFocus
+          ariaLabel="Search or scan barcode"
+          placeholder="Scan barcode or search product / SKU…"
+          value={query}
+          onChange={setQuery}
+          onKeyDown={onSearchKeyDown}
+        />
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {searching ? (

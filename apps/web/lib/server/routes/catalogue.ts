@@ -210,7 +210,7 @@ productRoutes.get("/", requireAuth, async (c) => {
   const params = new URL(c.req.url).searchParams;
   const search = (params.get("search") ?? "").trim();
   const rawCategoryId = params.get("categoryId") ?? params.get("category") ?? "";
-  if (rawCategoryId && !isUuid(rawCategoryId)) return fail(c, 400, "VALIDATION", "categoryId must be a UUID.");
+  if (rawCategoryId && !isUuid(rawCategoryId)) return fail(c, 400, "VALIDATION", "We couldn't tell which category that is. Pick it again and retry.");
   const categoryId = rawCategoryId;
   const status = params.get("status") ?? "active"; // active | deactivated | all
   const lowStock = params.get("lowStock") === "1";

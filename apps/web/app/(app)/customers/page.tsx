@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { SearchIcon, UsersIcon, PlusIcon, PencilIcon, HistoryIcon } from "lucide-react";
+import { UsersIcon, PlusIcon, PencilIcon, HistoryIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError, formatRWF, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ErrorAlert, EmptyState } from "@/components/state";
+import { SearchInput } from "@/components/search-input";
 
 type Customer = {
   id: string;
@@ -70,7 +71,7 @@ export default function CustomersPage() {
     api<{ items: Customer[] }>(`/customers?${q.toString()}`)
       .then((r) => setItems(r.items))
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load customers."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the customers. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [query]);
@@ -120,7 +121,7 @@ export default function CustomersPage() {
       setDialogOpen(false);
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not save the customer.");
+      setFormError(err instanceof ApiError ? err.message : "We couldn't save the customer. Please try again.");
     } finally {
       setPending(false);
     }
@@ -147,10 +148,12 @@ export default function CustomersPage() {
         <Button onClick={openCreate}><PlusIcon aria-hidden /> Add customer</Button>
       </div>
 
-      <div className="relative">
-        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <Input type="search" aria-label="Search customers" placeholder="Search name, phone or email…" className="pl-9" value={query} onChange={(e) => setQuery(e.target.value)} />
-      </div>
+      <SearchInput
+        ariaLabel="Search customers"
+        placeholder="Search name, phone or email…"
+        value={query}
+        onChange={setQuery}
+      />
 
       {error ? <ErrorAlert message={error} onRetry={load} /> : null}
 

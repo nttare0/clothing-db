@@ -156,7 +156,7 @@ export function ProductForm({
           setFieldErrors((prev) => ({ ...prev, variants: err.message }));
         }
       } else {
-        setError("Could not save the product. Check the connection and try again.");
+        setError("We couldn't save the product. Check your internet connection and try again.");
       }
       setPending(false);
     }
@@ -178,7 +178,7 @@ export function ProductForm({
         </Button>
       </div>
 
-      {error ? <ErrorAlert title="Could not save the product" message={error} /> : null}
+      {error ? <ErrorAlert title="We couldn't save the product" message={error} /> : null}
 
       <Card>
         <CardHeader>

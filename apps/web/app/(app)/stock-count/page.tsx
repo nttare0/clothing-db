@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ClipboardCheckIcon, SearchIcon, PackageCheckIcon } from "lucide-react";
+import { ClipboardCheckIcon, PackageCheckIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SearchInput } from "@/components/search-input";
 
 type Countable = {
   variantId: string;
@@ -77,7 +78,7 @@ export default function StockCountPage() {
         setCounts({});
         setConfirming(false);
       })
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Could not load variants."));
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "We couldn't load the variants. Check your internet connection and try again."));
   }, [scope, search]);
 
   const countedLines = useMemo(
@@ -118,7 +119,7 @@ export default function StockCountPage() {
       setConfirming(false);
       loadSessions();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not post the count.");
+      setError(err instanceof ApiError ? err.message : "We couldn't save the count. Please try again.");
       setConfirming(false);
     } finally {
       setPosting(false);
@@ -146,10 +147,13 @@ export default function StockCountPage() {
                 {categories.map((c) => <NativeSelectOption key={c.id} value={c.id}>{c.name}</NativeSelectOption>)}
               </NativeSelect>
             </div>
-            <div className="relative flex-1">
-              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <Input aria-label="Filter variants" placeholder="Filter by name or SKU…" className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
+            <SearchInput
+              className="flex-1"
+              ariaLabel="Filter variants"
+              placeholder="Filter by name or SKU…"
+              value={search}
+              onChange={setSearch}
+            />
             <Button onClick={loadVariants}>Load</Button>
           </CardContent>
         </Card>

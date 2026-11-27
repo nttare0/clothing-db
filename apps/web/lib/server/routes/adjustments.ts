@@ -167,7 +167,7 @@ countRoutes.get("/countable", requireAuth, requirePermission("counts.manage"), a
   const search = (params.get("search") ?? "").trim().toLowerCase();
   const like = `%${search}%`;
   if (categoryId && !/^[0-9a-f-]{36}$/i.test(categoryId)) {
-    return fail(c, 400, "VALIDATION", "categoryId must be a UUID.");
+    return fail(c, 400, "VALIDATION", "We couldn't tell which category that is. Pick it again and retry.");
   }
   const rows = await sql<
     {

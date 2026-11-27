@@ -85,7 +85,7 @@ export default function ProductDetailPage() {
         setMovements(m.items);
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load the product."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the product. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [params.id]);
@@ -102,7 +102,7 @@ export default function ProductDetailPage() {
       router.refresh();
       load();
     } catch (err) {
-      toast.error("Could not deactivate", {
+      toast.error("We couldn't deactivate", {
         description: err instanceof ApiError ? err.message : "Try again.",
       });
     } finally {

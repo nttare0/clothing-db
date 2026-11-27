@@ -37,7 +37,7 @@ export default function ProfilePage() {
     api<Me>("/auth/me")
       .then(setMe)
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load your profile."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load your profile. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, []);
@@ -71,7 +71,7 @@ export default function ProfilePage() {
       setConfirm("");
       toast.success("Password updated");
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not update the password.");
+      setFormError(err instanceof ApiError ? err.message : "We couldn't update your password. Please try again.");
     } finally {
       setPending(false);
     }

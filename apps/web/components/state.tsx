@@ -4,7 +4,7 @@ import { CircleAlertIcon, InboxIcon, RotateCcwIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export function ErrorAlert({
-  title = "Could not load this data",
+  title = "We couldn't load this right now",
   message,
   onRetry,
 }: {

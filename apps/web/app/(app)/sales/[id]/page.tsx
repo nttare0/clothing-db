@@ -62,7 +62,7 @@ export default function SaleDetailPage() {
     setError(null);
     api<SaleDetail>(`/sales/${params.id}`)
       .then(setSale)
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Could not load the sale."))
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "We couldn't load this sale. Check your internet connection and try again."))
       .finally(() => setLoading(false));
   }, [params.id]);
 

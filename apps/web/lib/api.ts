@@ -87,7 +87,7 @@ export async function api<T>(
   } catch {
     throw new ApiError(0, {
       code: "NETWORK_ERROR",
-      message: "Could not reach the server. Check the connection and try again.",
+      message: "We can't reach the server right now. Please check your internet connection and try again.",
     });
   }
 
@@ -103,6 +103,9 @@ export async function api<T>(
     // hanging on a promise that never settles. Reject so UI error/loading
     // states resolve; the navigation wins the race anyway.
     try {
+      // Full document navigation is deliberate: the current JS bundle may be the
+      // very thing that died, and there is no router inside this module.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/session-expired");
     } catch {
       // non-navigable context — fall through to the typed error
@@ -113,7 +116,7 @@ export async function api<T>(
   if (!res.ok || (payload && payload.error)) {
     const shape = payload?.error ?? {
       code: `HTTP_${res.status}`,
-      message: "Something went wrong. Please try again.",
+      message: "That didn't work. Please try again.",
     };
     throw new ApiError(res.status, shape);
   }

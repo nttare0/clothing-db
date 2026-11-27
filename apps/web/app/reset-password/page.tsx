@@ -51,7 +51,7 @@ function ResetPasswordForm() {
           setError(err.message);
         }
       } else {
-        setError("Could not reach the server. Check the connection and try again.");
+        setError("We can't reach the server right now. Check your internet connection and try again.");
       }
     } finally {
       setPending(false);

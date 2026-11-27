@@ -3,11 +3,10 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeftRightIcon, SearchIcon } from "lucide-react";
+import { ArrowLeftRightIcon } from "lucide-react";
 import { api, ApiError, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ErrorAlert, EmptyState } from "@/components/state";
+import { SearchInput } from "@/components/search-input";
 
 type MovementRow = {
   id: string;
@@ -74,7 +74,7 @@ function StockMovementsView() {
         setTotal(r.total);
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load movements."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the movements. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [productId, reference, query, type, page]);
@@ -100,17 +100,13 @@ function StockMovementsView() {
       </div>
 
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <div className="relative flex-1">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <Input
-            type="search"
-            aria-label="Search movements"
-            placeholder="Search product, SKU or reference…"
-            className="pl-9"
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-          />
-        </div>
+        <SearchInput
+          className="flex-1"
+          ariaLabel="Search movements"
+          placeholder="Search product, SKU or reference…"
+          value={query}
+          onChange={(v) => { setQuery(v); setPage(1); }}
+        />
         <NativeSelect
           aria-label="Filter by movement type"
           value={type}

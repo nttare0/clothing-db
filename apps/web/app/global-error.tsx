@@ -33,7 +33,7 @@ export default function GlobalError({
             alt="A tangled spool of blue thread with a sewing needle and an unstitched button"
             style={{ width: "100%", maxWidth: 300, borderRadius: 16, objectFit: "cover" }}
           />
-          <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>ClothFlow hit a critical error</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Oh dear — ClothFlow hit a snag</h1>
           {chunk ? (
             <p style={{ fontSize: 14, color: "#475569", maxWidth: 420, margin: 0 }}>
               A new version of ClothFlow was deployed while this page was open. Reloading gets you the latest screens.
@@ -41,7 +41,7 @@ export default function GlobalError({
           ) : (
             <>
               <p style={{ fontSize: 14, color: "#475569", maxWidth: 420, margin: 0 }}>
-                The app could not render at all. Try again — if this persists, quote this reference to support:{" "}
+                ClothFlow could not start up properly. Try again — if this keeps happening, show this reference to the store administrator:{" "}
                 <code style={{ background: "#e2e8f0", borderRadius: 6, padding: "2px 6px", fontSize: 12 }}>{reference}</code>
               </p>
               <p

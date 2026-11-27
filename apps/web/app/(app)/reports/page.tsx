@@ -94,7 +94,7 @@ function useReport<T>(path: string, enabled: boolean) {
     api<T>(path)
       .then(setData)
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load the report."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the report. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [path]);

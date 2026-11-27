@@ -39,7 +39,7 @@ export default function SettingsPage() {
     api<Settings>("/settings")
       .then(setForm)
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load settings."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the settings. Check your internet connection and try again."),
       );
   }, []);
 
@@ -80,7 +80,7 @@ export default function SettingsPage() {
       toast.success("Settings saved");
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Could not save settings.");
+      toast.error(err instanceof ApiError ? err.message : "We couldn't save the settings. Please try again.");
     } finally {
       setPending(false);
     }

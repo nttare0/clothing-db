@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { SearchIcon, TruckIcon, PlusIcon, PencilIcon, ArchiveIcon, HistoryIcon } from "lucide-react";
+import { TruckIcon, PlusIcon, PencilIcon, ArchiveIcon, HistoryIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError, formatRWF, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { ErrorAlert, EmptyState } from "@/components/state";
 import { RoleGate } from "@/components/role-gate";
+import { SearchInput } from "@/components/search-input";
 
 type Supplier = {
   id: string;
@@ -78,7 +79,7 @@ export default function SuppliersPage() {
     api<{ items: Supplier[] }>(`/suppliers?${q.toString()}`)
       .then((r) => setItems(r.items))
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load suppliers."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the suppliers. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [query, showArchived]);
@@ -128,7 +129,7 @@ export default function SuppliersPage() {
       setDialogOpen(false);
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not save the supplier.");
+      setFormError(err instanceof ApiError ? err.message : "We couldn't save the supplier. Please try again.");
     } finally {
       setPending(false);
     }
@@ -140,7 +141,7 @@ export default function SuppliersPage() {
       toast.success(s.status === "active" ? "Supplier archived" : "Supplier reactivated");
       load();
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Could not update the supplier.");
+      toast.error(err instanceof ApiError ? err.message : "We couldn't update the supplier. Please try again.");
     }
   }
 
@@ -167,10 +168,13 @@ export default function SuppliersPage() {
         </div>
 
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input type="search" aria-label="Search suppliers" placeholder="Search name, contact, phone…" className="pl-9" value={query} onChange={(e) => setQuery(e.target.value)} />
-          </div>
+          <SearchInput
+            className="flex-1"
+            ariaLabel="Search suppliers"
+            placeholder="Search name, contact, phone…"
+            value={query}
+            onChange={setQuery}
+          />
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <input type="checkbox" className="size-4 rounded border-border" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
             Show archived

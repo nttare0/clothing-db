@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 @import "./style-nova.css";
 
+/* Class-based dark mode (toggled by next-themes on <html>). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #F5F7FB;
   --foreground: #172033;

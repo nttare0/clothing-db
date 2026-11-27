@@ -31,7 +31,7 @@ export default function NotificationsPage() {
     api<{ items: Notification[] }>("/notifications")
       .then((r) => setItems(r.items))
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load notifications."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load your notifications. Check your internet connection and try again."),
       );
   }, []);
 
@@ -45,7 +45,7 @@ export default function NotificationsPage() {
       await api("/notifications/read-all", { method: "POST" });
       setItems((rows) => rows?.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })) ?? rows);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not mark notifications as read.");
+      setError(err instanceof ApiError ? err.message : "We couldn't mark them as read. Please try again.");
     } finally {
       setWorking(false);
     }

@@ -52,7 +52,7 @@ export default function CategoriesPage() {
     api<{ items: Category[] }>("/categories")
       .then((r) => setItems(r.items))
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load categories."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the categories. Check your internet connection and try again."),
       );
   }, []);
 
@@ -101,7 +101,7 @@ export default function CategoriesPage() {
       setDialogOpen(false);
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not save the category.");
+      setFormError(err instanceof ApiError ? err.message : "We couldn't save the category. Please try again.");
     } finally {
       setPending(false);
     }
@@ -113,7 +113,7 @@ export default function CategoriesPage() {
       toast.success("Category archived");
       load();
     } catch (err) {
-      toast.error("Could not archive", {
+      toast.error("We couldn't archive", {
         description: err instanceof ApiError ? err.message : "Try again.",
       });
     }

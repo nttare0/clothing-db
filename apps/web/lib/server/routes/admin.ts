@@ -124,7 +124,7 @@ staffRoutes.patch(
     if (body.activeUntil !== undefined) {
       nextActiveUntil = body.activeUntil === "" || body.activeUntil === null ? null : new Date(body.activeUntil);
       if (nextActiveUntil !== null && Number.isNaN(nextActiveUntil.getTime())) {
-        return fail(c, 400, "INVALID_DATE", "Active-until must be a valid date.");
+        return fail(c, 400, "INVALID_DATE", "That expiry date isn't valid. Pick a date and try again.");
       }
     }
     const effectiveActiveUntil = nextActiveUntil === undefined ? target.active_until : nextActiveUntil?.toISOString() ?? null;

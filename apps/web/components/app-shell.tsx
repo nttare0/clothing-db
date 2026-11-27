@@ -34,12 +34,14 @@ import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { roleCan, type Permission } from "@/lib/permissions";
 import { useDemoActive, dismissDemo } from "@/lib/demo-state";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useOnline } from "@/lib/use-online";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -256,6 +258,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </p>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="icon-sm"
@@ -286,17 +289,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 }
               />
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <span className="block text-sm font-medium">{me?.name ?? "Staff account"}</span>
-                  <span className="block truncate text-xs font-normal text-muted-foreground">
-                    {me?.email ?? "Sign-in required"}
-                  </span>
-                  {me?.role ? (
-                    <span className="mt-1 inline-block text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {me.role}
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>
+                    <span className="block text-sm font-medium">{me?.name ?? "Staff account"}</span>
+                    <span className="block truncate text-xs font-normal text-muted-foreground">
+                      {me?.email ?? "Sign-in required"}
                     </span>
-                  ) : null}
-                </DropdownMenuLabel>
+                    {me?.role ? (
+                      <span className="mt-1 inline-block text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {me.role}
+                      </span>
+                    ) : null}
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => router.push("/profile")}>
                   <UserIcon aria-hidden /> My profile

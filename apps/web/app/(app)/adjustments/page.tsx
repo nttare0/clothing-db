@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { SearchIcon, SlidersHorizontalIcon, ShieldAlertIcon } from "lucide-react";
+import { SlidersHorizontalIcon, ShieldAlertIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { SearchInput } from "@/components/search-input";
 
 type SearchResult = {
   variantId: string;
@@ -130,7 +131,7 @@ export default function AdjustmentsPage() {
       setNote("");
       loadRecent();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not record the adjustment.");
+      setFormError(err instanceof ApiError ? err.message : "We couldn't record the adjustment. Nothing was changed — please try again.");
     } finally {
       setPending(false);
     }
@@ -164,10 +165,14 @@ export default function AdjustmentsPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="relative">
-                        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                        <Input id="variant-search" type="search" placeholder="Search name, SKU or barcode…" className="pl-9" value={query} onChange={(e) => setQuery(e.target.value)} autoComplete="off" />
-                      </div>
+                      <SearchInput
+                        id="variant-search"
+                        ariaLabel="Search name, SKU or barcode"
+                        placeholder="Search name, SKU or barcode…"
+                        value={query}
+                        onChange={setQuery}
+                        autoComplete="off"
+                      />
                       {results.length > 0 ? (
                         <ul className="max-h-56 overflow-y-auto rounded-lg border border-border">
                           {results.map((r) => (

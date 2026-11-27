@@ -33,13 +33,13 @@ export function createApp() {
     // Full detail stays in server logs; the employee sees a safe, referenceable message.
     console.error("unhandled_error", requestId, err);
     return c.json(
-      { error: { code: "INTERNAL", message: `Something went wrong on our side. Reference: ${requestId}`, requestId } },
+      { error: { code: "INTERNAL", message: `Sorry — something went wrong on our side. Please try again. If it keeps happening, show this code to the store administrator: ${requestId}`, requestId } },
       500,
     );
   });
 
   app.notFound((c) =>
-    c.json({ error: { code: "NOT_FOUND", message: "Unknown endpoint.", requestId: c.get("requestId") } }, 404),
+    c.json({ error: { code: "NOT_FOUND", message: "We couldn't find what you asked for.", requestId: c.get("requestId") } }, 404),
   );
 
   app.get("/health", async (c) => {

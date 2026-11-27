@@ -10,7 +10,7 @@ export const returnsRoutes = new Hono();
 // Per-line return eligibility for one sale (used by the return form).
 returnsRoutes.get("/eligibility", requireAuth, requirePermission("returns.process"), async (c) => {
   const saleId = new URL(c.req.url).searchParams.get("saleId") ?? "";
-  if (!/^[0-9a-f-]{36}$/i.test(saleId)) return fail(c, 400, "VALIDATION", "saleId must be a UUID.");
+  if (!/^[0-9a-f-]{36}$/i.test(saleId)) return fail(c, 400, "VALIDATION", "We couldn't find that sale. Go back to Sales history and try again.");
 
   const rows = await sql<
     {

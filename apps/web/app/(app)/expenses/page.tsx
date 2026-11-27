@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { ErrorAlert, EmptyState } from "@/components/state";
 import { RoleGate } from "@/components/role-gate";
+import { SearchInput } from "@/components/search-input";
 
 const CATEGORIES = [
   "Rent",
@@ -107,7 +108,7 @@ export default function ExpensesPage() {
     api<ListResponse>(`/expenses?${q.toString()}`)
       .then(setData)
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load expenses."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the expenses. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [category, from, to, query, page]);
@@ -166,7 +167,7 @@ export default function ExpensesPage() {
       setDialogOpen(false);
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not save the expense.");
+      setFormError(err instanceof ApiError ? err.message : "We couldn't save the expense. Please try again.");
     } finally {
       setPending(false);
     }
@@ -207,7 +208,13 @@ export default function ExpensesPage() {
 
         {/* Filters */}
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <Input type="search" aria-label="Search expenses" placeholder="Search payee, description, category…" className="lg:max-w-xs" value={query} onChange={(e) => { setQuery(e.target.value); setPage(1); }} />
+          <SearchInput
+            ariaLabel="Search expenses"
+            placeholder="Search payee, description, category…"
+            className="lg:max-w-xs"
+            value={query}
+            onChange={(v) => { setQuery(v); setPage(1); }}
+          />
           <NativeSelect aria-label="Filter by category" value={category} onChange={(e) => { setCategory(e.target.value); setPage(1); }}>
             <NativeSelectOption value="all">All categories</NativeSelectOption>
             {CATEGORIES.map((c) => <NativeSelectOption key={c} value={c}>{c}</NativeSelectOption>)}

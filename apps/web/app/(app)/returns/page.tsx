@@ -2,10 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { SearchIcon, Undo2Icon } from "lucide-react";
+import { Undo2Icon } from "lucide-react";
 import { api, ApiError, formatRWF, formatDateTime } from "@/lib/api";
 import { buttonVariants } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ErrorAlert, EmptyState } from "@/components/state";
+import { SearchInput } from "@/components/search-input";
 
 type ReturnRow = {
   id: string;
@@ -60,7 +60,7 @@ export default function ReturnsPage() {
         setTotal(r.total);
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load returns."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the returns. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [query, page]);
@@ -84,17 +84,12 @@ export default function ReturnsPage() {
         </Link>
       </div>
 
-      <div className="relative">
-        <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-        <Input
-          type="search"
-          aria-label="Search by receipt number"
-          placeholder="Search receipt number…"
-          className="pl-9"
-          value={query}
-          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-        />
-      </div>
+      <SearchInput
+        ariaLabel="Search by receipt number"
+        placeholder="Search receipt number…"
+        value={query}
+        onChange={(v) => { setQuery(v); setPage(1); }}
+      />
 
       {error ? <ErrorAlert message={error} onRetry={load} /> : null}
 

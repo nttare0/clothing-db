@@ -72,7 +72,7 @@ export default function DashboardPage() {
     api<DashboardData>(`/dashboard?range=${range}`)
       .then(setData)
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load the dashboard."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the dashboard. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [range]);

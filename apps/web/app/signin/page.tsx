@@ -55,7 +55,7 @@ function SignInForm() {
           setError(err.message || "Sign-in failed. Try again.");
         }
       } else {
-        setError("Could not reach the server. Check the connection and try again.");
+        setError("We can't reach the server right now. Check your internet connection and try again.");
       }
       setPending(false);
     }
