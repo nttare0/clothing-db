@@ -61,7 +61,7 @@ const RANGES = [
 ] as const;
 
 export default function DashboardPage() {
-  const [range, setRange] = useState<(typeof RANGES)[number]["id"]>("today");
+  const [range, setRange] = useState<(typeof RANGES)[number]["id"]>("30d");
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

@@ -5,6 +5,9 @@ import { createApp } from "@/lib/server/app";
 // and deployment, so there is no cross-project proxy or CORS surface.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Run the API in Frankfurt, next to the Supabase database (eu-central-1).
+// The default region (iad1) made every query a transatlantic round trip.
+export const preferredRegion = "fra1";
 
 const app = createApp();
 const serve = (req: Request) => app.fetch(req);
