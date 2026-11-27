@@ -190,11 +190,11 @@ export default function CategoriesPage() {
           <form onSubmit={save} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="category-name">Name *</Label>
-              <Input id="category-name" autoFocus required value={name} onChange={(e) => setName(e.target.value)} placeholder="T-shirts" />
+              <Input id="category-name" autoFocus required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. T-shirts" />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="category-description">Description</Label>
-              <Input id="category-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional" />
+              <Input id="category-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Everyday tees and vests" />
             </div>
             {formError ? <p role="alert" className="text-sm text-destructive">{formError}</p> : null}
             <DialogFooter>

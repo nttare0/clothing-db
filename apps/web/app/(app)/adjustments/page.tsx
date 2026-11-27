@@ -222,7 +222,7 @@ export default function AdjustmentsPage() {
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="note">Note (optional)</Label>
-                    <Input id="note" placeholder="Reference / context" value={note} onChange={(e) => setNote(e.target.value)} />
+                    <Input id="note" placeholder="e.g. Till slip #1234" value={note} onChange={(e) => setNote(e.target.value)} />
                   </div>
                 </div>
 

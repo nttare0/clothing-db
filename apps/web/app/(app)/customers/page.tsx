@@ -218,7 +218,7 @@ export default function CustomersPage() {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cust-email">Email</Label>
-              <Input id="cust-email" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              <Input id="cust-email" type="email" placeholder="customer@example.com" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cust-notes">Notes</Label>

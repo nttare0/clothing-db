@@ -207,7 +207,7 @@ function StockInForm() {
                   </div>
                   <div className="col-span-4 sm:col-span-2">
                     <Label htmlFor={`qty-${i}`} className="text-xs">Qty *</Label>
-                    <Input id={`qty-${i}`} inputMode="numeric" className="tabular-nums" value={line.quantity} onChange={(e) => setLines((rows) => rows.map((r, j) => (j === i ? { ...r, quantity: e.target.value } : r)))} />
+                    <Input id={`qty-${i}`} inputMode="numeric" placeholder="1" className="tabular-nums" value={line.quantity} onChange={(e) => setLines((rows) => rows.map((r, j) => (j === i ? { ...r, quantity: e.target.value } : r)))} />
                   </div>
                   <div className="col-span-6 sm:col-span-4">
                     <Label htmlFor={`cost-${i}`} className="text-xs">Unit cost (RWF)</Label>
@@ -238,11 +238,11 @@ function StockInForm() {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="reference">Reference</Label>
-            <Input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="GRN-0007 / supplier invoice no." />
+            <Input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="GRN-0007 or supplier invoice no." />
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="note">Note</Label>
-            <Input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note for the ledger" />
+            <Input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Invoice attached — agreed 14-day terms" />
           </div>
         </CardContent>
       </Card>

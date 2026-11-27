@@ -90,7 +90,7 @@ function SignInForm() {
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="you@example.com"
+                placeholder="name@example.com or username"
               />
             </div>
 
@@ -106,7 +106,6 @@ function SignInForm() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pr-12"
-                  placeholder="••••••••"
                 />
                 <button
                   type="button"

@@ -108,7 +108,7 @@ export default function SettingsPage() {
               <CardContent className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="store-name">Store name</Label>
-                  <Input id="store-name" value={form.store_name ?? ""} onChange={(e) => setForm({ ...form, store_name: e.target.value })} required />
+                  <Input id="store-name" placeholder="e.g. ClothFlow Store" value={form.store_name ?? ""} onChange={(e) => setForm({ ...form, store_name: e.target.value })} required />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="store-address">Address</Label>
@@ -116,7 +116,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="store-phone">Phone</Label>
-                  <Input id="store-phone" inputMode="tel" value={form.store_phone ?? ""} onChange={(e) => setForm({ ...form, store_phone: e.target.value })} placeholder="+250 …" />
+                  <Input id="store-phone" inputMode="tel" value={form.store_phone ?? ""} onChange={(e) => setForm({ ...form, store_phone: e.target.value })} placeholder="+250 788 000 000" />
                 </div>
               </CardContent>
             </Card>

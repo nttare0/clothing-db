@@ -358,7 +358,7 @@ export default function PosPage() {
                   <Input
                     className="col-span-3"
                     aria-label="Reference (optional)"
-                    placeholder="Ref…"
+                    placeholder="e.g. MOMO-2841"
                     value={payment.reference}
                     onChange={(e) => updatePayment(payment.id, { reference: e.target.value })}
                   />
@@ -543,7 +543,7 @@ export default function PosPage() {
         </div>
         <div className="mt-2">
           <Label htmlFor="customer" className="text-xs text-muted-foreground">Customer phone (optional)</Label>
-          <Input id="customer" inputMode="tel" placeholder="07xx xxx xxx" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="mt-1 h-9" />
+          <Input id="customer" inputMode="tel" placeholder="+250 788 000 000" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="mt-1 h-9" />
         </div>
         <Button className="mt-3 w-full" size="lg" disabled={cart.length === 0} onClick={() => setStep("payment")}>
           Proceed to payment <ChevronRightIcon aria-hidden />

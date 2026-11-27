@@ -204,7 +204,7 @@ export default function StockCountPage() {
                               min={0}
                               aria-label={`Counted for ${v.sku}`}
                               className="ml-auto h-9 w-20 text-right"
-                              placeholder="—"
+                              placeholder="0"
                               value={raw ?? ""}
                               onChange={(e) => { setCounts((c0) => ({ ...c0, [v.variantId]: e.target.value })); setConfirming(false); }}
                             />

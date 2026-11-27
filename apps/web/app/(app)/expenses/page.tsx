@@ -293,7 +293,7 @@ export default function ExpensesPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="exp-amount">Amount (RWF) <span className="text-destructive">*</span></Label>
-                  <Input id="exp-amount" type="number" inputMode="numeric" min={1} step="1" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} required autoFocus />
+                  <Input id="exp-amount" type="number" inputMode="numeric" min={1} step="1" placeholder="e.g. 25000" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} required autoFocus />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="exp-method">Payment method</Label>

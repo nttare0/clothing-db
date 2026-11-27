@@ -242,16 +242,16 @@ export default function SuppliersPage() {
             <form onSubmit={save} className="flex flex-col gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="sup-name">Name <span className="text-destructive">*</span></Label>
-                <Input id="sup-name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus required />
+                <Input id="sup-name" placeholder="e.g. Kigali Garments Ltd" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus required />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="sup-contact">Contact person</Label>
-                  <Input id="sup-contact" value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))} />
+                  <Input id="sup-contact" placeholder="e.g. Jean Bosco" value={form.contactName} onChange={(e) => setForm((f) => ({ ...f, contactName: e.target.value }))} />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="sup-phone">Phone</Label>
-                  <Input id="sup-phone" inputMode="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+250…" />
+                  <Input id="sup-phone" inputMode="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+250 788 000 000" />
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">

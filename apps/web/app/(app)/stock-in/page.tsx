@@ -83,7 +83,7 @@ export default function StockInListPage() {
         <SearchInput
           className="flex-1"
           ariaLabel="Search by reference"
-          placeholder="Search reference / GRN…"
+          placeholder="Search reference or GRN…"
           value={query}
           onChange={(v) => { setQuery(v); setPage(1); }}
         />

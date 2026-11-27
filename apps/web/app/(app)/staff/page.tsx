@@ -361,11 +361,11 @@ export default function StaffPage() {
               <form onSubmit={createStaff} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="staff-name">Full name <span className="text-destructive">*</span></Label>
-                  <Input id="staff-name" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus required />
+                  <Input id="staff-name" placeholder="e.g. Aline Iradukunda" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoFocus required />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="staff-email">Email <span className="text-destructive">*</span></Label>
-                  <Input id="staff-email" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required placeholder="name@clothflow.rw" />
+                  <Input id="staff-email" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required placeholder="name@clothflow.store" />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="staff-role">Role</Label>

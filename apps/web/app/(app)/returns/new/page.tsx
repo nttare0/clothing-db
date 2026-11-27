@@ -253,7 +253,7 @@ function ReturnForm() {
               </div>
               <div className="flex flex-col gap-1.5 sm:col-span-2">
                 <Label htmlFor="note">Note (optional)</Label>
-                <Textarea id="note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Context for the audit trail" />
+                <Textarea id="note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Unworn, tags attached" />
               </div>
               {formError ? <p role="alert" className="text-sm text-destructive sm:col-span-2">{formError}</p> : null}
               {hasInvalid ? <p role="alert" className="text-sm text-destructive sm:col-span-2">A return quantity exceeds what is returnable for that line.</p> : null}
