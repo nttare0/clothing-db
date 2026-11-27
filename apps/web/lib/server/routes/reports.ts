@@ -84,8 +84,8 @@ reportRoutes.get("/inventory", requireAuth, requirePermission("reports.view"), a
              COALESCE(SUM(b.quantity_quarantined), 0)::text AS quarantined,
              COALESCE(SUM(b.quantity_on_hand * b.moving_average_cost), 0)::text AS value,
              COUNT(*)::text AS skus
-      FROM product_variants v LEFT JOIN inventory_balances b ON b.variant_id = v.id
-      WHERE v.status = 'active'
+      FROM product_variants v JOIN products p ON p.id = v.product_id LEFT JOIN inventory_balances b ON b.variant_id = v.id
+      WHERE v.status = 'active' AND p.status = 'active'
     `,
     sql<{ variant_id: string; product_name: string; size: string; colour: string | null; sku: string; sellable: number; reorder_level: number }[]>`
       SELECT v.id AS variant_id, p.name AS product_name, v.size, v.colour, v.sku,
@@ -93,7 +93,7 @@ reportRoutes.get("/inventory", requireAuth, requirePermission("reports.view"), a
              v.reorder_level
       FROM product_variants v JOIN products p ON p.id = v.product_id
       LEFT JOIN inventory_balances b ON b.variant_id = v.id
-      WHERE v.status = 'active'
+      WHERE v.status = 'active' AND p.status = 'active'
         AND (COALESCE(b.quantity_on_hand,0) - COALESCE(b.quantity_reserved,0) - COALESCE(b.quantity_damaged,0) - COALESCE(b.quantity_quarantined,0)) <= v.reorder_level
       ORDER BY sellable ASC, p.name
       LIMIT 20
@@ -105,7 +105,7 @@ reportRoutes.get("/inventory", requireAuth, requirePermission("reports.view"), a
       FROM product_variants v JOIN products p ON p.id = v.product_id
       LEFT JOIN categories cat ON cat.id = p.category_id
       LEFT JOIN inventory_balances b ON b.variant_id = v.id
-      WHERE v.status = 'active'
+      WHERE v.status = 'active' AND p.status = 'active'
       GROUP BY cat.name ORDER BY SUM(b.quantity_on_hand * b.moving_average_cost) DESC NULLS LAST
     `,
   ]);
