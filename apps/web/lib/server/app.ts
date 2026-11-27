@@ -8,6 +8,7 @@ import { salesRoutes } from "./routes/sales";
 import { stockRoutes } from "./routes/stock";
 import { dashboardRoutes } from "./routes/dashboard";
 import { notificationRoutes } from "./routes/notifications";
+import { demoRoutes } from "./routes/demo";
 import { returnsRoutes } from "./routes/returns";
 import { adjustmentRoutes, countRoutes } from "./routes/adjustments";
 import { customerRoutes, supplierRoutes } from "./routes/people";
@@ -62,6 +63,7 @@ export function createApp() {
   app.route("/sales", salesRoutes);
   app.route("/dashboard", dashboardRoutes);
   app.route("/notifications", notificationRoutes);
+  app.route("/demo", demoRoutes);
   app.route("/returns", returnsRoutes);
   app.route("/adjustments", adjustmentRoutes);
   app.route("/stock-counts", countRoutes);

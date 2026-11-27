@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { ShirtIcon, RefreshCwIcon, HomeIcon } from "lucide-react";
+import { errorReference, isChunkError, reloadOnceForChunkError } from "@/lib/error-reference";
 
 export default function Error({
   error,
@@ -10,9 +11,12 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const chunk = isChunkError(error);
+  const reference = errorReference(error);
+
   useEffect(() => {
-    // Keep a console trail; the digest matches what the server logs.
     console.error("Route error boundary:", error);
+    reloadOnceForChunkError(error);
   }, [error]);
 
   return (
@@ -21,20 +25,37 @@ export default function Error({
         <ShirtIcon className="size-7" aria-hidden />
       </span>
       <div className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold tracking-tight">Something went wrong</h1>
+        <h1 className="text-xl font-semibold tracking-tight">
+          {chunk ? "ClothFlow was just updated" : "Something went wrong"}
+        </h1>
         <p className="max-w-md text-sm text-muted-foreground">
-          The page hit an unexpected error. Your work in other tabs is safe. If this keeps happening,
-          quote this reference to support:{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{error.digest ?? "no-reference"}</code>
+          {chunk ? (
+            <>A new version was deployed while this page was open. Reloading gets you the latest screens — your work is not lost.</>
+          ) : (
+            <>
+              The page hit an unexpected error. Your work in other tabs is safe. If this keeps happening,
+              quote this reference to support:{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{reference}</code>
+            </>
+          )}
         </p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <button
-          onClick={reset}
-          className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <RefreshCwIcon className="size-4" aria-hidden /> Try again
-        </button>
+        {chunk ? (
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <RefreshCwIcon className="size-4" aria-hidden /> Reload now
+          </button>
+        ) : (
+          <button
+            onClick={reset}
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <RefreshCwIcon className="size-4" aria-hidden /> Try again
+          </button>
+        )}
         <a
           href="/dashboard"
           className="inline-flex h-10 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium hover:bg-muted"

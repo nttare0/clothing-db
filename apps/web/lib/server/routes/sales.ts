@@ -5,6 +5,7 @@ import { audit, fail, ok, requireAuth, requirePermission } from "../http";
 import { zValidator } from "@hono/zod-validator";
 import { hook } from "../validate";
 import { maybeLowStockAlert } from "./stock";
+import { maybeRemoveDemo } from "../demo";
 
 export const salesRoutes = new Hono();
 
@@ -224,6 +225,7 @@ salesRoutes.post(
         after: { receiptNumber: sale.receiptNumber, total: sale.total },
         requestId: c.get("requestId"),
       });
+      await maybeRemoveDemo(user.id, c.get("requestId"));
       return ok(c, payload, 201);
     } catch (err) {
       if (err instanceof SaleError) return fail(c, err.status, err.code, err.message);

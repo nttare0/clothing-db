@@ -4,6 +4,7 @@ import { sql } from "../db";
 import { audit, fail, ok, requireAuth, requirePermission } from "../http";
 import { zValidator } from "@hono/zod-validator";
 import { hook } from "../validate";
+import { maybeRemoveDemo } from "../demo";
 
 export const stockRoutes = new Hono();
 
@@ -131,6 +132,7 @@ stockRoutes.post(
         after: { items: lines.length, reason: body.reason, reference: body.reference ?? null },
         requestId: c.get("requestId"),
       });
+      await maybeRemoveDemo(user.id, c.get("requestId"));
       return ok(c, { id: purchaseId }, 201);
     } catch (err) {
       if (err instanceof StockError) return fail(c, err.status, err.code, err.message);

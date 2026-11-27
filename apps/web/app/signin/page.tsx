@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { EyeIcon, EyeOffIcon, ShirtIcon } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
@@ -20,6 +20,20 @@ function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lockedUntil, setLockedUntil] = useState<number | null>(null);
+  const [lockRemaining, setLockRemaining] = useState(0);
+
+  useEffect(() => {
+    if (lockedUntil === null) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000));
+      setLockRemaining(remaining);
+      if (remaining === 0) setLockedUntil(null);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [lockedUntil]);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,10 +45,14 @@ function SignInForm() {
       router.refresh();
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.code === "RATE_LIMITED") {
-          setError("Too many attempts. Wait a minute and try again.");
+        if (err.code === "LOCKED" || err.code === "RATE_LIMITED") {
+          const seconds = err.retryAfter ?? 60;
+          setLockedUntil(Date.now() + seconds * 1000);
+          setError("Locked after 5 wrong passwords.");
+        } else if (err.code === "INVALID_CREDENTIALS") {
+          setError(err.message);
         } else {
-          setError("Invalid email or password.");
+          setError(err.message || "Sign-in failed. Try again.");
         }
       } else {
         setError("Could not reach the server. Check the connection and try again.");
@@ -103,13 +121,18 @@ function SignInForm() {
             </div>
 
             {error ? (
-              <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {error}
-              </p>
+              <div role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                <p>{error}</p>
+                {lockedUntil !== null ? (
+                  <p className="mt-1 font-semibold tabular-nums" aria-live="polite">
+                    Trying again in {lockRemaining}s…
+                  </p>
+                ) : null}
+              </div>
             ) : null}
 
-            <Button type="submit" size="lg" disabled={pending} className="w-full">
-              {pending ? "Signing in…" : "Sign in"}
+            <Button type="submit" size="lg" disabled={pending || lockedUntil !== null} className="w-full">
+              {lockedUntil !== null ? `Locked (${lockRemaining}s)` : pending ? "Signing in…" : "Sign in"}
             </Button>
 
             <a

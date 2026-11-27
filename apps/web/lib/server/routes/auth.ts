@@ -17,7 +17,8 @@ import {
   ok,
   requireAuth,
 } from "../http";
-import { rateLimit } from "../rate-limit";
+import { rateLimit, signinLockSeconds, recordSigninFailure, clearSigninFailures } from "../rate-limit"; // rateLimit still guards forgot-password
+import { ensureDemoSeed } from "../demo";
 import { zValidator } from "@hono/zod-validator";
 import { hook } from "../validate";
 
@@ -34,8 +35,14 @@ authRoutes.post(
   async (c) => {
     const { identifier, password } = c.req.valid("json");
     const key = identifier.toLowerCase();
-    if (!rateLimit(`signin:${key}`, 10, 5 * 60_000)) {
-      return fail(c, 429, "RATE_LIMITED", "Too many attempts. Wait a few minutes and try again.");
+
+    // Account lockout: 5 wrong passwords locks this account for 60 seconds.
+    const lockSeconds = signinLockSeconds(key);
+    if (lockSeconds !== null) {
+      return c.json(
+        { error: { code: "LOCKED", message: `Too many wrong passwords. Try again in ${lockSeconds} seconds.`, requestId: c.get("requestId"), retryAfter: lockSeconds } },
+        429,
+      );
     }
 
     const rows = await sql<
@@ -49,8 +56,19 @@ authRoutes.post(
     const user = rows[0];
     // Same response whether the account exists, is deactivated or the password is wrong.
     if (!user || user.status !== "active" || !verifyPassword(password, user.password_hash)) {
-      return fail(c, 400, "INVALID_CREDENTIALS", "Invalid email or password.");
+      const failure = recordSigninFailure(key);
+      if (failure.blocked) {
+        return c.json(
+          { error: { code: "LOCKED", message: `Too many wrong passwords. Try again in ${failure.retryAfter} seconds.`, requestId: c.get("requestId"), retryAfter: failure.retryAfter } },
+          429,
+        );
+      }
+      return c.json(
+        { error: { code: "INVALID_CREDENTIALS", message: `Invalid email or password. ${failure.remaining} attempt${failure.remaining === 1 ? "" : "s"} left before a 1-minute lock.`, requestId: c.get("requestId"), attemptsLeft: failure.remaining } },
+        400,
+      );
     }
+    clearSigninFailures(key);
 
     const token = generateSessionToken();
     await sql`
@@ -66,6 +84,14 @@ authRoutes.post(
       path: "/",
       maxAge: SESSION_TTL_SECONDS,
     });
+
+    // First sign-in on an empty store: seed the demo workspace so the app
+    // shows itself off. Best-effort — never block or fail the sign-in.
+    try {
+      await ensureDemoSeed(user.id);
+    } catch (err) {
+      console.error("demo_seed_failed", err);
+    }
 
     return ok(c, { name: user.name, email: user.email, role: user.role });
   },

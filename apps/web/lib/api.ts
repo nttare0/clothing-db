@@ -1,9 +1,13 @@
-export type ApiErrorShape = { code: string; message: string; requestId?: string };
+export type ApiErrorShape = { code: string; message: string; requestId?: string; retryAfter?: number; attemptsLeft?: number };
 
 export class ApiError extends Error {
   code: string;
   status: number;
   requestId?: string;
+  /** Seconds until the lockout expires (only on 429 LOCKED responses). */
+  retryAfter?: number;
+  /** Wrong-password attempts left before the 60-second lock. */
+  attemptsLeft?: number;
 
   constructor(status: number, shape: ApiErrorShape) {
     super(shape.message);
@@ -11,6 +15,8 @@ export class ApiError extends Error {
     this.status = status;
     this.code = shape.code;
     this.requestId = shape.requestId;
+    this.retryAfter = shape.retryAfter;
+    this.attemptsLeft = shape.attemptsLeft;
   }
 }
 
