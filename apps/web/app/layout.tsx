@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { getDemoState } from "@/lib/server/demo";
+
+// Every route renders on demand: the demo flag must be fresh per request
+// and never baked into statically prerendered HTML.
+export const dynamic = "force-dynamic";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://clothflow-web.vercel.app";
 
@@ -22,8 +27,8 @@ export const metadata: Metadata = {
     images: [
       {
         url: "/og-image.jpg",
-        width: 960,
-        height: 640,
+        width: 640,
+        height: 427,
         alt: "ClothFlow — clothing store operations, inventory and point of sale",
       },
     ],
@@ -44,10 +49,21 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Demo flag injected before any app JS runs (first body node, parsed before
+  // async module chunks execute). Failure → demo off, never a broken page.
+  let demoActive = false;
+  try {
+    demoActive = (await getDemoState()) === "active";
+  } catch (err) {
+    console.error("root_demo_state_failed", err);
+  }
   return (
     <html lang="en" className="h-full antialiased">
       <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
+        {demoActive ? (
+          <script dangerouslySetInnerHTML={{ __html: "window.__CLOTHFLOW_DEMO__=true" }} />
+        ) : null}
         {children}
       </body>
     </html>

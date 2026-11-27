@@ -33,7 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { roleCan, type Permission } from "@/lib/permissions";
-import { setDemoActive, useDemoActive, dismissDemo } from "@/lib/demo-state";
+import { useDemoActive, dismissDemo } from "@/lib/demo-state";
 import { useOnline } from "@/lib/use-online";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -99,16 +99,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
 
 type Me = { name: string | null; email: string; role: string | null };
 
-export function AppShell({ children, demoActive }: { children: React.ReactNode; demoActive: boolean }) {
-  // Sync the module-level demo flag during render (before any child effect fires),
-  // so pages fetch fixtures on the very first paint of a fresh store.
-  // Runs once per mount: client-side navigations keep the shell mounted, and
-  // must not re-arm a demo the user just dismissed (state adjusted during render).
-  const [demoSynced, setDemoSynced] = useState(false);
-  if (typeof window !== "undefined" && !demoSynced) {
-    setDemoSynced(true);
-    setDemoActive(demoActive);
-  }
+export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const online = useOnline();

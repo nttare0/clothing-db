@@ -206,9 +206,9 @@ class StockError extends Error {
 }
 
 // Accepts the postgres.js transaction handle (loosely typed: TransactionSql is a call-compatible subset).
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type SqlTransaction = import("postgres").TransactionSql<Record<string, never>>;
 export async function maybeLowStockAlert(
-  tx: any,
+  tx: SqlTransaction,
   variantId: string,
 ): Promise<void> {
   const rows = await tx<

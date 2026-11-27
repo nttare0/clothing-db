@@ -15,8 +15,11 @@ function getClient(): Sql {
   if (!client) {
     // Supabase pooler (transaction mode) note: prepared statements must be disabled.
     // `max` stays low — each serverless invocation opens at most this many connections.
+    // Local development/testing against a plain postgres (sslmode=disable) opts out;
+    // hosted databases (Supabase pooler) keep require by default.
+    const sslDisabled = /[?&]sslmode=disable(&|$)/.test(connectionString);
     client = postgres(connectionString, {
-      ssl: "require",
+      ssl: sslDisabled ? false : "require",
       prepare: false,
       max: 4,
       idle_timeout: 20,

@@ -99,9 +99,15 @@ export async function api<T>(
   }
 
   if (res.status === 401 && typeof window !== "undefined") {
-    window.location.assign("/session-expired");
-    // keep waiting; navigation will unload the page
-    return new Promise<T>(() => {});
+    // Bounce the whole app to the re-auth screen — but never leave the caller
+    // hanging on a promise that never settles. Reject so UI error/loading
+    // states resolve; the navigation wins the race anyway.
+    try {
+      window.location.assign("/session-expired");
+    } catch {
+      // non-navigable context — fall through to the typed error
+    }
+    throw new ApiError(401, { code: "SESSION_EXPIRED", message: "Your session has expired. Sign in again." });
   }
 
   if (!res.ok || (payload && payload.error)) {

@@ -8,7 +8,14 @@
 import { useSyncExternalStore } from "react";
 import { clearApiCache } from "./api-cache";
 
-let active = false;
+// Initial value: injected by the server layout via an inline script
+// (window.__CLOTHFLOW_DEMO__) before any bundle code runs. Deterministic
+// across the client realm; always false on the server — hydration therefore
+// matches SSR HTML exactly, and useSyncExternalStore flips the banner on
+// immediately after mount.
+let active =
+  typeof window !== "undefined" &&
+  Boolean((window as unknown as { __CLOTHFLOW_DEMO__?: boolean }).__CLOTHFLOW_DEMO__);
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -37,8 +44,11 @@ function getSnapshot(): boolean {
   return active;
 }
 
+// Must return the SSR value on the server AND during client hydration,
+// so the hydration render matches the server HTML. The banner flips on
+// right after hydration when React re-reads getSnapshot().
 function getServerSnapshot(): boolean {
-  return active;
+  return false;
 }
 
 /** React hook for components (banner, badges). */
