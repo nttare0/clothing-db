@@ -253,7 +253,7 @@ export default function AdjustmentsPage() {
                         <TableCell className="text-xs text-muted-foreground">{formatDateTime(row.createdAt)}</TableCell>
                         <TableCell>
                           <p className="max-w-44 truncate text-sm">{row.productName} · {row.label}</p>
-                          <p className="font-mono text-[10px] text-muted-foreground">{row.sku}</p>
+                          <p className="max-w-44 break-all font-mono text-[10px] text-muted-foreground">{row.sku}</p>
                         </TableCell>
                         <TableCell className={`text-right font-semibold tabular-nums ${row.onHandDelta < 0 ? "text-destructive" : "text-emerald-600"}`}>
                           {row.onHandDelta > 0 ? `+${row.onHandDelta}` : row.onHandDelta}

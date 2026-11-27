@@ -136,7 +136,7 @@ export default function StockInListPage() {
                     <TableCell>
                       <span className="flex items-center gap-2 font-medium">
                         <ReceiptTextIcon className="size-4 text-muted-foreground" aria-hidden />
-                        {row.reference ?? row.id.slice(0, 8)}
+                        <span className="break-all">{row.reference ?? row.id.slice(0, 8)}</span>
                       </span>
                     </TableCell>
                     <TableCell><Badge variant="secondary">{row.reason.replaceAll("_", " ")}</Badge></TableCell>

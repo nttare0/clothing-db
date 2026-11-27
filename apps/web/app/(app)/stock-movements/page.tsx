@@ -157,10 +157,10 @@ function StockMovementsView() {
                       <Badge variant={TYPE_VARIANT[m.type] ?? "secondary"}>{m.type.replaceAll("_", " ")}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Link href={`/products/${m.productId}`} className="font-medium hover:underline">
+                      <Link href={`/products/${m.productId}`} className="block max-w-64 truncate font-medium hover:underline" title={m.productName}>
                         {m.productName}
                       </Link>
-                      <span className="block text-xs text-muted-foreground">{m.label} · {m.sku}</span>
+                      <span className="block max-w-64 truncate text-xs text-muted-foreground" title={`${m.label} · ${m.sku}`}>{m.label} · {m.sku}</span>
                     </TableCell>
                     <TableCell className={`text-right tabular-nums font-medium ${m.onHandDelta >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                       {m.onHandDelta >= 0 ? "+" : ""}{m.onHandDelta}

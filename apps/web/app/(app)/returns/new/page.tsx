@@ -199,7 +199,7 @@ function ReturnForm() {
                         <p className="font-medium">{item.productName}</p>
                         <p className="text-xs text-muted-foreground">{item.variantLabel} · {formatRWF(item.unitPrice)}</p>
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{item.sku}</TableCell>
+                      <TableCell className="max-w-36 break-all font-mono text-xs">{item.sku}</TableCell>
                       <TableCell className="text-right tabular-nums">{item.returnable} / {item.sold}</TableCell>
                       <TableCell className="text-right">
                         <Input

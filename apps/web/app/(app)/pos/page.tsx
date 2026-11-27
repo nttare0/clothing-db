@@ -229,9 +229,9 @@ export default function PosPage() {
               {sale.discountTotal > 0 ? <div className="flex justify-between"><span>Discount</span><span>-{formatRWF(sale.discountTotal)}</span></div> : null}
               <div className="flex justify-between font-bold"><span>Total</span><span>{formatRWF(sale.total)}</span></div>
               {sale.payments.map((p, i) => (
-                <div key={i} className="flex justify-between text-xs">
-                  <span>{METHODS.find((m) => m.id === p.method)?.label ?? p.method}{p.reference ? ` · ${p.reference}` : ""}</span>
-                  <span>{formatRWF(p.amount)}</span>
+                <div key={i} className="flex items-baseline justify-between gap-2 text-xs">
+                  <span className="min-w-0 truncate" title={p.reference ? `${METHODS.find((m) => m.id === p.method)?.label ?? p.method} · ${p.reference}` : undefined}>{METHODS.find((m) => m.id === p.method)?.label ?? p.method}{p.reference ? ` · ${p.reference}` : ""}</span>
+                  <span className="shrink-0">{formatRWF(p.amount)}</span>
                 </div>
               ))}
               {sale.changeDue > 0 ? <div className="flex justify-between"><span>Change due</span><span>{formatRWF(sale.changeDue)}</span></div> : null}
@@ -377,7 +377,7 @@ export default function PosPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{line.productName}</p>
-                    <p className="text-xs text-muted-foreground">{line.label} · {line.sku}</p>
+                    <p className="max-w-56 truncate text-xs text-muted-foreground" title={`${line.label} · ${line.sku}`}>{line.label} · {line.sku}</p>
                   </div>
                   <button onClick={() => setCart((l) => l.filter((x) => x.variantId !== line.variantId))} aria-label="Remove item" className="text-muted-foreground hover:text-destructive">
                     <Trash2Icon className="size-4" />
@@ -462,7 +462,7 @@ export default function PosPage() {
                         {item.sellable} left
                       </Badge>
                     </span>
-                    <span className="text-xs text-muted-foreground">{item.label} · {item.sku}</span>
+                    <span className="min-w-0 truncate text-xs text-muted-foreground" title={`${item.label} · ${item.sku}`}>{item.label} · {item.sku}</span>
                     <span className="text-base font-semibold tabular-nums">{formatRWF(item.price)}</span>
                   </button>
                 </li>

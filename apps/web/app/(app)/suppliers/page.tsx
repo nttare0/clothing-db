@@ -203,14 +203,14 @@ export default function SuppliersPage() {
                 {items.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="pl-4">
-                      <span className="font-medium">{s.name}</span>
+                      <span className="block max-w-56 truncate font-medium" title={s.name}>{s.name}</span>
                       {s.status === "archived" ? <Badge variant="secondary" className="ml-2 text-[10px]">Archived</Badge> : null}
-                      {s.address ? <p className="text-xs text-muted-foreground">{s.address}</p> : null}
+                      {s.address ? <p className="max-w-56 truncate text-xs text-muted-foreground" title={s.address}>{s.address}</p> : null}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {s.contactPerson ? <span className="block">{s.contactPerson}</span> : null}
-                      {s.phone ? <span className="block text-muted-foreground">{s.phone}</span> : null}
-                      {s.email ? <span className="block text-xs text-muted-foreground">{s.email}</span> : null}
+                      {s.contactPerson ? <span className="block max-w-52 truncate" title={s.contactPerson}>{s.contactPerson}</span> : null}
+                      {s.phone ? <span className="block max-w-52 break-all text-muted-foreground">{s.phone}</span> : null}
+                      {s.email ? <span className="block max-w-52 truncate text-xs text-muted-foreground" title={s.email}>{s.email}</span> : null}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{s.purchaseCount}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatRWF(s.totalPurchaseCost)}</TableCell>

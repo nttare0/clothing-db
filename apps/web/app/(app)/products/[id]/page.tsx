@@ -265,7 +265,7 @@ export default function ProductDetailPage() {
                     <TableCell className={`tabular-nums ${m.onHandDelta >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                       {m.onHandDelta >= 0 ? "+" : ""}{m.onHandDelta}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{m.reference ?? "—"}</TableCell>
+                    <TableCell className="max-w-40 break-all text-muted-foreground">{m.reference ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{m.actor ?? "—"}</TableCell>
                   </TableRow>
                 ))}

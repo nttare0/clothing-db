@@ -178,11 +178,11 @@ export default function CustomersPage() {
               {items.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="pl-4">
-                    <span className="font-medium">{c.name ?? "Unnamed customer"}</span>
-                    {c.email ? <p className="text-xs text-muted-foreground">{c.email}</p> : null}
+                    <span className="block max-w-52 truncate font-medium" title={c.name ?? "Unnamed customer"}>{c.name ?? "Unnamed customer"}</span>
+                    {c.email ? <p className="max-w-52 truncate text-xs text-muted-foreground" title={c.email}>{c.email}</p> : null}
                     {c.notes ? <p className="max-w-52 truncate text-xs text-muted-foreground" title={c.notes}>{c.notes}</p> : null}
                   </TableCell>
-                  <TableCell className="font-mono text-sm">{c.phone}</TableCell>
+                  <TableCell className="max-w-40 break-all font-mono text-sm">{c.phone}</TableCell>
                   <TableCell className="text-right tabular-nums">{c.salesCount}</TableCell>
                   <TableCell className="text-right tabular-nums">{formatRWF(c.salesTotal)}</TableCell>
                   <TableCell className="text-right">

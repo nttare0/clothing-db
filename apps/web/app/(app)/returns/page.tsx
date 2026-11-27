@@ -125,7 +125,7 @@ export default function ReturnsPage() {
                   <TableCell className="pl-4 text-sm text-muted-foreground">{formatDateTime(row.createdAt)}</TableCell>
                   <TableCell>
                     <Link href={`/sales/${row.saleId}`} className="font-mono font-medium text-primary hover:underline">
-                      {row.receiptNumber}
+                      <span className="break-all">{row.receiptNumber}</span>
                     </Link>
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{row.items}</TableCell>

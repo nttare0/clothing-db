@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ShirtIcon, ArrowLeftIcon, HomeIcon } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeftIcon, HomeIcon } from "lucide-react";
 
 export const metadata = {
   title: "Page not found — ClothFlow",
@@ -7,14 +8,19 @@ export const metadata = {
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 text-center">
-      <span className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-        <ShirtIcon className="size-7" aria-hidden />
-      </span>
-      <div className="flex flex-col gap-2">
-        <p className="text-6xl font-bold tracking-tight text-muted-foreground/40 tabular-nums">404</p>
-        <h1 className="text-xl font-semibold tracking-tight">This rack is empty</h1>
-        <p className="max-w-sm text-sm text-muted-foreground">
+    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 py-12 text-center">
+      <Image
+        src="/illustrations/not-found.png"
+        alt="An empty clothing rack with a single hanger and price tag"
+        width={880}
+        height={480}
+        priority
+        className="w-full max-w-sm rounded-2xl object-cover sm:max-w-md"
+      />
+      <div className="flex flex-col gap-1.5">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Error 404</p>
+        <h1 className="text-2xl font-semibold tracking-tight">This rack is empty</h1>
+        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
           The page you were looking for doesn&apos;t exist or was moved. Check the address, or head back to the workspace.
         </p>
       </div>

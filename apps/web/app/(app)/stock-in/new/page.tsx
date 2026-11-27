@@ -205,8 +205,8 @@ function StockInForm() {
               {lines.map((line, i) => (
                 <li key={line.variantId} className="grid grid-cols-12 items-end gap-2 py-2">
                   <div className="col-span-12 sm:col-span-4">
-                    <p className="text-sm font-medium">{line.label}</p>
-                    <p className="text-xs text-muted-foreground">{line.sku}</p>
+                    <p className="max-w-64 truncate text-sm font-medium" title={line.label}>{line.label}</p>
+                    <p className="max-w-64 truncate text-xs text-muted-foreground" title={line.sku}>{line.sku}</p>
                   </div>
                   <div className="col-span-4 sm:col-span-2">
                     <Label htmlFor={`qty-${i}`} className="text-xs">Qty *</Label>

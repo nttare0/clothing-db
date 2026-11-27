@@ -148,7 +148,7 @@ export default function SaleDetailPage() {
                 <TableRow key={item.id}>
                   <TableCell className="py-1">
                     <span className="block font-semibold">{item.label}</span>
-                    <Link href={`/products/${item.productId}`} className="text-[10px] text-muted-foreground print:no-underline hover:underline">
+                    <Link href={`/products/${item.productId}`} className="break-all text-[10px] text-muted-foreground print:no-underline hover:underline">
                       {item.sku}
                     </Link>
                   </TableCell>
