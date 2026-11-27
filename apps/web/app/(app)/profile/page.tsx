@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { UserIcon, KeyRoundIcon, CircleCheckIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { UserIcon, KeyRoundIcon, CircleCheckIcon, EyeIcon, EyeOffIcon, LogOutIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,9 @@ type Me = {
 };
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,6 +78,17 @@ export default function ProfilePage() {
     } finally {
       setPending(false);
     }
+  }
+
+  async function signOut() {
+    setSigningOut(true);
+    try {
+      await api("/auth/signout", { method: "POST" });
+    } catch {
+      // sign-out is best-effort; leave the page either way
+    }
+    router.push("/signin");
+    router.refresh();
   }
 
   if (loading) {
@@ -146,6 +160,18 @@ export default function ProfilePage() {
               {pending ? "Updating…" : "Update password"}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><LogOutIcon className="size-4" aria-hidden /> Sign out</CardTitle>
+          <CardDescription>End your session on this device. You can sign back in at any time.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={signOut} disabled={signingOut}>
+            <LogOutIcon aria-hidden /> {signingOut ? "Signing out…" : "Sign out of ClothFlow"}
+          </Button>
         </CardContent>
       </Card>
 

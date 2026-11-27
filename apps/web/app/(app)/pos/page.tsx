@@ -33,6 +33,8 @@ type SearchResult = {
   sellable: number;
 };
 
+type CatalogItem = SearchResult & { brand: string | null; categoryId: string | null; category: string | null };
+
 type CartLine = SearchResult & { qty: number };
 
 type Payment = { id: string; method: string; amount: string; reference: string };
@@ -69,6 +71,13 @@ export default function PosPage() {
   const [payments, setPayments] = useState<Payment[]>([
     { id: "p1", method: "cash", amount: "", reference: "" },
   ]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [browseCategory, setBrowseCategory] = useState("");
+  const [browseItems, setBrowseItems] = useState<CatalogItem[]>([]);
+  const [browseTotal, setBrowseTotal] = useState(0);
+  const [browsePage, setBrowsePage] = useState(1);
+  const [browseLoading, setBrowseLoading] = useState(false);
+  const [browseLoadingMore, setBrowseLoadingMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sale, setSale] = useState<CompletedSale | null>(null);
@@ -105,6 +114,59 @@ export default function PosPage() {
     }, 200);
     return () => clearTimeout(t);
   }, [query]);
+
+  // Categories for the browse filter — fetched once; empty list just hides the chips.
+  useEffect(() => {
+    api<{ items: { id: string; name: string; active?: boolean }[] }>("/categories")
+      .then((r) => setCategories(r.items.filter((c) => c.active !== false).map((c) => ({ id: c.id, name: c.name }))))
+      .catch(() => setCategories([]));
+  }, []);
+
+  const BROWSE_SIZE = 48;
+
+  // Browsable catalogue: what you see when the search box is empty.
+  useEffect(() => {
+    if (query.trim().length >= 2) return; // search mode takes over
+    let cancelled = false;
+    const t = setTimeout(() => {
+      setBrowseLoading(true); // async callback — safe setState
+      const qs = new URLSearchParams({ page: "1", pageSize: String(BROWSE_SIZE) });
+      if (browseCategory) qs.set("categoryId", browseCategory);
+      api<{ items: CatalogItem[]; total: number }>(`/pos/catalog?${qs}`)
+        .then((r) => {
+          if (cancelled) return;
+          setBrowseItems(r.items);
+          setBrowseTotal(r.total);
+          setBrowsePage(1);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setBrowseItems([]);
+          setBrowseTotal(0);
+        })
+        .finally(() => {
+          if (!cancelled) setBrowseLoading(false);
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [browseCategory, query]);
+
+  function loadMoreBrowse() {
+    setBrowseLoadingMore(true);
+    const qs = new URLSearchParams({ page: String(browsePage + 1), pageSize: String(BROWSE_SIZE) });
+    if (browseCategory) qs.set("categoryId", browseCategory);
+    api<{ items: CatalogItem[]; total: number }>(`/pos/catalog?${qs}`)
+      .then((r) => {
+        setBrowseItems((cur) => (browsePage + 1 === 1 ? r.items : [...cur, ...r.items]));
+        setBrowseTotal(r.total);
+        setBrowsePage((p) => p + 1);
+      })
+      .catch(() => toast.error("We couldn't load more products", { description: "Check your connection and try again." }))
+      .finally(() => setBrowseLoadingMore(false));
+  }
 
   function addToCart(item: SearchResult, qty = 1) {
     setCart((lines) => {
@@ -348,6 +410,72 @@ export default function PosPage() {
     );
   }
 
+  // One tile design shared by search results and the browsable catalogue.
+  function renderTile(item: SearchResult) {
+    return (
+      <li key={item.variantId}>
+        <button
+          onClick={() => addToCart(item, 1)}
+          disabled={item.sellable <= 0}
+          className="flex w-full flex-col gap-1 rounded-xl border border-border bg-card p-3 text-left transition-colors enabled:hover:border-primary enabled:hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <span className="flex items-center justify-between gap-2">
+            <span className="truncate text-sm font-semibold">{item.productName}</span>
+            <Badge variant={item.sellable === 0 ? "destructive" : item.sellable <= 3 ? "warning" : "success"} className="tabular-nums">
+              {item.sellable} left
+            </Badge>
+          </span>
+          <span className="min-w-0 truncate text-xs text-muted-foreground" title={`${item.label} · ${item.sku}`}>{item.label} · {item.sku}</span>
+          <span className="text-base font-semibold tabular-nums">{item.price == null ? "—" : formatRWF(item.price)}</span>
+        </button>
+      </li>
+    );
+  }
+
+  const browseChip = (active: boolean) =>
+    `rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+      active
+        ? "border-primary bg-primary text-primary-foreground"
+        : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+    }`;
+
+  const browseGrid = (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by category">
+        <button type="button" aria-pressed={browseCategory === ""} onClick={() => setBrowseCategory("")} className={browseChip(browseCategory === "")}>
+          All products
+        </button>
+        {categories.map((cat) => (
+          <button key={cat.id} type="button" aria-pressed={browseCategory === cat.id} onClick={() => setBrowseCategory(cat.id)} className={browseChip(browseCategory === cat.id)}>
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
+      {browseLoading ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">Loading products…</p>
+      ) : browseItems.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-10 text-center">
+          <ShoppingCartIcon className="size-8 text-muted-foreground" aria-hidden />
+          <p className="text-sm font-medium">No products here yet</p>
+          <p className="max-w-xs text-xs text-muted-foreground">Once products are added to the catalogue, you can tap them here to add them to the sale — no typing needed.</p>
+        </div>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">{browseTotal} product{browseTotal === 1 ? "" : "s"} · tap to add</p>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {browseItems.map(renderTile)}
+          </ul>
+          {browseItems.length < browseTotal ? (
+            <Button variant="outline" className="mx-auto" disabled={browseLoadingMore} onClick={loadMoreBrowse}>
+              {browseLoadingMore ? "Loading…" : `Show more (${browseTotal - browseItems.length} left)`}
+            </Button>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+
   /* ---------- cart step ---------- */
   const cartPane = (
     <Card className="flex h-full flex-col overflow-hidden">
@@ -379,9 +507,9 @@ export default function PosPage() {
                     <p className="truncate text-sm font-medium">{line.productName}</p>
                     <p className="max-w-56 truncate text-xs text-muted-foreground" title={`${line.label} · ${line.sku}`}>{line.label} · {line.sku}</p>
                   </div>
-                  <button onClick={() => setCart((l) => l.filter((x) => x.variantId !== line.variantId))} aria-label="Remove item" className="text-muted-foreground hover:text-destructive">
-                    <Trash2Icon className="size-4" />
-                  </button>
+                  <Button variant="ghost" size="xs" onClick={() => setCart((l) => l.filter((x) => x.variantId !== line.variantId))} aria-label={`Remove ${line.productName} ${line.label} from the sale`} className="gap-1.5 text-muted-foreground hover:text-destructive">
+                    <Trash2Icon className="size-4" aria-hidden /> Remove
+                  </Button>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
@@ -444,33 +572,17 @@ export default function PosPage() {
             <p className="py-8 text-center text-sm text-muted-foreground">Searching…</p>
           ) : results.length > 0 ? (
             <ul className="grid gap-2 sm:grid-cols-2">
-              {results.map((item) => (
-                <li key={item.variantId}>
-                  <button
-                    onClick={() => addToCart(item, 1)}
-                    disabled={item.sellable <= 0}
-                    className="flex w-full flex-col gap-1 rounded-xl border border-border bg-card p-3 text-left transition-colors enabled:hover:border-primary enabled:hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-semibold">{item.productName}</span>
-                      <Badge variant={item.sellable === 0 ? "destructive" : item.sellable <= 3 ? "warning" : "success"} className="tabular-nums">
-                        {item.sellable} left
-                      </Badge>
-                    </span>
-                    <span className="min-w-0 truncate text-xs text-muted-foreground" title={`${item.label} · ${item.sku}`}>{item.label} · {item.sku}</span>
-                    <span className="text-base font-semibold tabular-nums">{formatRWF(item.price)}</span>
-                  </button>
-                </li>
-              ))}
+              {results.map(renderTile)}
             </ul>
           ) : searched ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              No match for “{query.trim()}”. Check spelling, SKU or barcode.
-            </p>
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                No match for “{query.trim()}”. Check the spelling, SKU or barcode.
+              </p>
+              <Button variant="outline" onClick={() => setQuery("")}>Browse all products</Button>
+            </div>
           ) : (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Type at least 2 characters, or scan a barcode.
-            </p>
+            browseGrid
           )}
         </div>
 

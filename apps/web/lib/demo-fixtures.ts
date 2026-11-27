@@ -101,6 +101,33 @@ export function demoApiGet(rawPath: string): unknown | undefined {
     };
   }
 
+  // ---------- POS catalogue browse ----------
+  if (pathname === "/pos/catalog") {
+    const q = search;
+    const categoryId = (params.get("categoryId") ?? "").trim();
+    const page = num(params.get("page"), 1);
+    const pageSize = Math.min(96, Math.max(1, Number(params.get("pageSize")) || 48));
+    const rows = demoVariants.filter((v) => {
+      if (q && ![v.productName, v.sku, v.label, v.brand ?? "", v.category].some((f) => includes(f, q))) return false;
+      if (categoryId && demoCategories.find((c) => c.name === v.category)?.id !== categoryId) return false;
+      return true;
+    });
+    const total = rows.length;
+    const items = rows.slice((page - 1) * pageSize, page * pageSize).map((v) => ({
+      variantId: v.id,
+      productId: v.productId,
+      productName: v.productName,
+      label: v.label,
+      sku: v.sku,
+      price: v.price,
+      sellable: v.onHand,
+      brand: v.brand ?? null,
+      categoryId: demoCategories.find((c) => c.name === v.category)?.id ?? null,
+      category: v.category,
+    }));
+    return { items, total, page, pageSize };
+  }
+
   // ---------- POS / variants search ----------
   if (pathname === "/pos/search") {
     const q = (params.get("q") ?? "").trim().toLowerCase();

@@ -24,9 +24,6 @@ import {
   MenuIcon,
   XIcon,
   BellIcon,
-  ChevronDownIcon,
-  LogOutIcon,
-  UserIcon,
   WifiOffIcon,
   type LucideIcon,
 } from "lucide-react";
@@ -38,15 +35,6 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useOnline } from "@/lib/use-online";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 type NavItem = {
   label: string;
@@ -137,16 +125,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     .slice(0, 2)
     .map((s) => s[0]?.toUpperCase())
     .join("");
-
-  async function signOut() {
-    try {
-      await api("/auth/signout", { method: "POST" });
-    } catch {
-      // sign-out is best-effort; leave the page either way
-    }
-    router.push("/signin");
-    router.refresh();
-  }
 
   const nav = (
     <nav aria-label="Primary" className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-4">
@@ -274,44 +252,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" className="gap-2 px-2" aria-label="Account menu">
-                    <Avatar className="size-7">
-                      <AvatarFallback className="text-[11px] font-semibold">{initials || "S"}</AvatarFallback>
-                    </Avatar>
-                    <span className="hidden max-w-32 truncate text-sm font-medium md:inline">
-                      {me?.name ?? "Staff"}
-                    </span>
-                    <ChevronDownIcon className="hidden size-4 md:inline" aria-hidden />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>
-                    <span className="block text-sm font-medium">{me?.name ?? "Staff account"}</span>
-                    <span className="block truncate text-xs font-normal text-muted-foreground">
-                      {me?.email ?? "Sign-in required"}
-                    </span>
-                    {me?.role ? (
-                      <span className="mt-1 inline-block text-[10px] uppercase tracking-wide text-muted-foreground">
-                        {me.role}
-                      </span>
-                    ) : null}
-                  </DropdownMenuLabel>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/profile")}>
-                  <UserIcon aria-hidden /> My profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut} variant="destructive">
-                  <LogOutIcon aria-hidden /> Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Link
+              href="/profile"
+              aria-label="Open your profile"
+              title="Open your profile"
+              className="flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Avatar className="size-7">
+                <AvatarFallback className="text-[11px] font-semibold">{initials || "S"}</AvatarFallback>
+              </Avatar>
+              <span className="hidden max-w-32 truncate md:inline">{me?.name ?? "Staff"}</span>
+            </Link>
           </div>
         </header>
 
