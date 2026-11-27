@@ -102,7 +102,11 @@ type Me = { name: string | null; email: string; role: string | null };
 export function AppShell({ children, demoActive }: { children: React.ReactNode; demoActive: boolean }) {
   // Sync the module-level demo flag during render (before any child effect fires),
   // so pages fetch fixtures on the very first paint of a fresh store.
-  if (typeof window !== "undefined") {
+  // Runs once per mount: client-side navigations keep the shell mounted, and
+  // must not re-arm a demo the user just dismissed (state adjusted during render).
+  const [demoSynced, setDemoSynced] = useState(false);
+  if (typeof window !== "undefined" && !demoSynced) {
+    setDemoSynced(true);
     setDemoActive(demoActive);
   }
   const pathname = usePathname();
