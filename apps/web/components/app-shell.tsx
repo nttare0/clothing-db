@@ -160,7 +160,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const content = (
                   <>
                     <Icon className="size-[18px] shrink-0 text-current" aria-hidden />
-                    <span className="truncate">{item.label}</span>
+                    <span className="min-w-0 truncate">{item.label}</span>
                   </>
                 );
                 return (

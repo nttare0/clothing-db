@@ -108,7 +108,7 @@ function useReport<T>(path: string, enabled: boolean) {
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-lg border border-border p-3">
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-border p-3">
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="text-lg font-semibold tabular-nums sm:text-xl">{value}</p>
       {hint ? <p className="text-[11px] text-muted-foreground">{hint}</p> : null}

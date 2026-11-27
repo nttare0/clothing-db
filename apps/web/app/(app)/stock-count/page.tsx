@@ -162,7 +162,7 @@ export default function StockCountPage() {
 
         {variants ? (
           <Card className="p-0">
-            <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 p-4 pb-2">
+            <CardHeader className="flex-col items-start gap-3 space-y-0 p-4 pb-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle>Count sheet</CardTitle>
                 <CardDescription>{variants.length} variant{variants.length === 1 ? "" : "s"} · {countedLines.length} counted · {varianceLines.length} variance{varianceLines.length === 1 ? "" : "s"}</CardDescription>

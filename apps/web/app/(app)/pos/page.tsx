@@ -420,7 +420,7 @@ export default function PosPage() {
           className="flex w-full flex-col gap-1 rounded-xl border border-border bg-card p-3 text-left transition-colors enabled:hover:border-primary enabled:hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <span className="flex items-center justify-between gap-2">
-            <span className="truncate text-sm font-semibold">{item.productName}</span>
+            <span className="min-w-0 truncate text-sm font-semibold">{item.productName}</span>
             <Badge variant={item.sellable === 0 ? "destructive" : item.sellable <= 3 ? "warning" : "success"} className="tabular-nums">
               {item.sellable} left
             </Badge>
