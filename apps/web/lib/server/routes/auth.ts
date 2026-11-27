@@ -18,7 +18,6 @@ import {
   requireAuth,
 } from "../http";
 import { rateLimit, signinLockSeconds, recordSigninFailure, clearSigninFailures } from "../rate-limit"; // rateLimit still guards forgot-password
-import { ensureDemoSeed } from "../demo";
 import { zValidator } from "@hono/zod-validator";
 import { hook } from "../validate";
 
@@ -46,14 +45,21 @@ authRoutes.post(
     }
 
     const rows = await sql<
-      { id: string; name: string | null; email: string; role: string; password_hash: string; status: string }[]
+      { id: string; name: string | null; email: string; role: string; password_hash: string; status: string; active_until: string | null }[]
     >`
-      SELECT id, name, email, role, password_hash, status
+      SELECT id, name, email, role, password_hash, status, active_until
       FROM users
       WHERE lower(btrim(email)) = ${key} OR lower(btrim(username)) = ${key}
       LIMIT 1
     `;
-    const user = rows[0];
+    let user = rows[0];
+    // Lazily deactivate accounts whose active period has ended.
+    if (user && user.status === "active" && user.active_until && new Date(user.active_until).getTime() <= Date.now()) {
+      await sql`UPDATE users SET status = 'deactivated', updated_at = now() WHERE id = ${user.id}`;
+      await sql`UPDATE sessions SET revoked_at = now() WHERE user_id = ${user.id} AND revoked_at IS NULL`;
+      user = { ...user, status: "deactivated" };
+    }
+
     // Same response whether the account exists, is deactivated or the password is wrong.
     if (!user || user.status !== "active" || !verifyPassword(password, user.password_hash)) {
       const failure = recordSigninFailure(key);
@@ -84,14 +90,6 @@ authRoutes.post(
       path: "/",
       maxAge: SESSION_TTL_SECONDS,
     });
-
-    // First sign-in on an empty store: seed the demo workspace so the app
-    // shows itself off. Best-effort — never block or fail the sign-in.
-    try {
-      await ensureDemoSeed(user.id);
-    } catch (err) {
-      console.error("demo_seed_failed", err);
-    }
 
     return ok(c, { name: user.name, email: user.email, role: user.role });
   },
@@ -136,7 +134,7 @@ authRoutes.post(
     if (!stored || !verifyPassword(currentPassword, stored)) {
       return fail(c, 400, "INVALID_CURRENT_PASSWORD", "Your current password is not correct.");
     }
-    await sql`UPDATE users SET password_hash = ${hashPassword(newPassword)} WHERE id = ${user.id}`;
+    await sql`UPDATE users SET password_hash = ${hashPassword(newPassword)}, password_changed_at = now(), updated_at = now() WHERE id = ${user.id}`;
     // Keep the current session, revoke all others.
     const token = getCookie(c, SESSION_COOKIE);
     if (token) {
@@ -228,7 +226,7 @@ authRoutes.post(
     }
 
     await sql.begin(async (tx) => {
-      await tx`UPDATE users SET password_hash = ${hashPassword(password)} WHERE id = ${record.user_id}`;
+      await tx`UPDATE users SET password_hash = ${hashPassword(password)}, password_changed_at = now(), updated_at = now() WHERE id = ${record.user_id}`;
       await tx`UPDATE password_reset_tokens SET used_at = now() WHERE id = ${record.id}`;
       await tx`UPDATE sessions SET revoked_at = now() WHERE user_id = ${record.user_id} AND revoked_at IS NULL`;
     });

@@ -14,9 +14,9 @@ const roleEnum = z.enum(["owner", "manager", "stock_clerk", "cashier"]);
 
 staffRoutes.get("/", requireAuth, requirePermission("staff.manage"), async (c) => {
   const rows = await sql<
-    { id: string; name: string; email: string; role: string; status: string; last_sign_in_at: string | null; created_at: string }[]
+    { id: string; name: string; email: string; role: string; status: string; last_sign_in_at: string | null; created_at: string; active_until: string | null; password_changed_at: string | null }[]
   >`
-    SELECT id, name, email, role, status, last_sign_in_at, created_at
+    SELECT id, name, email, role, status, last_sign_in_at, created_at, active_until, password_changed_at
     FROM users
     ORDER BY status, role, lower(name)
   `;
@@ -29,6 +29,8 @@ staffRoutes.get("/", requireAuth, requirePermission("staff.manage"), async (c) =
       status: r.status,
       lastSignInAt: r.last_sign_in_at,
       createdAt: r.created_at,
+      activeUntil: r.active_until,
+      passwordChangedAt: r.password_changed_at,
     })),
   });
 });
@@ -52,8 +54,8 @@ staffRoutes.post(
 
     const tempPassword = `cf-${randomBytes(9).toString("base64url")}`;
     const rows = await sql<{ id: string }[]>`
-      INSERT INTO users (name, email, role, password_hash, status)
-      VALUES (${body.name.trim()}, ${email}, ${body.role}, ${hashPassword(tempPassword)}, 'active')
+      INSERT INTO users (name, email, role, password_hash, status, password_changed_at)
+      VALUES (${body.name.trim()}, ${email}, ${body.role}, ${hashPassword(tempPassword)}, 'active', now())
       RETURNING id
     `;
     const userId = rows[0]!.id;
@@ -82,20 +84,30 @@ staffRoutes.patch(
     name: z.string().trim().min(1).max(120).optional(),
     role: roleEnum.optional(),
     status: z.enum(["active", "deactivated"]).optional(),
+    // ISO datetime string ("" or null to clear the expiry); undefined = unchanged.
+    activeUntil: z.union([z.string().min(4).max(40), z.null()]).optional(),
   }), hook),
   async (c) => {
     const id = c.req.param("id");
     const body = c.req.valid("json");
     const actor = c.get("user");
 
-    const existing = await sql<{ id: string; name: string; email: string; role: string; status: string }[]>`
-      SELECT id, name, email, role, status FROM users WHERE id = ${id} LIMIT 1
+    const existing = await sql<{ id: string; name: string; email: string; role: string; status: string; active_until: string | null }[]>`
+      SELECT id, name, email, role, status, active_until FROM users WHERE id = ${id} LIMIT 1
     `;
     const target = existing[0];
     if (!target) return fail(c, 404, "NOT_FOUND", "User not found.");
 
     const nextRole = body.role ?? target.role;
-    const nextStatus = body.status ?? target.status;
+    const requestedStatus = body.status ?? target.status;
+    // Expiry in the past forces deactivation even if the caller left status active.
+    const requestedActiveUntil = body.activeUntil === undefined
+      ? target.active_until
+      : body.activeUntil === "" || body.activeUntil === null
+        ? null
+        : body.activeUntil;
+    const expiryForcesOff = requestedActiveUntil !== null && !Number.isNaN(new Date(requestedActiveUntil).getTime()) && new Date(requestedActiveUntil).getTime() <= Date.now();
+    const nextStatus = expiryForcesOff ? "deactivated" : requestedStatus;
 
     // Never strand the store without an active owner.
     if (target.role === "owner" && (nextRole !== "owner" || nextStatus !== "active")) {
@@ -106,18 +118,88 @@ staffRoutes.patch(
     }
 
     const name = body.name?.trim() ?? target.name;
-    await sql`UPDATE users SET name = ${name}, role = ${nextRole}, status = ${nextStatus} WHERE id = ${id}`;
-    if (nextStatus === "deactivated") {
+
+    // Active period (auto-deactivation). undefined = unchanged; "" / null = no expiry.
+    let nextActiveUntil: Date | null | undefined = undefined;
+    if (body.activeUntil !== undefined) {
+      nextActiveUntil = body.activeUntil === "" || body.activeUntil === null ? null : new Date(body.activeUntil);
+      if (nextActiveUntil !== null && Number.isNaN(nextActiveUntil.getTime())) {
+        return fail(c, 400, "INVALID_DATE", "Active-until must be a valid date.");
+      }
+    }
+    const effectiveActiveUntil = nextActiveUntil === undefined ? target.active_until : nextActiveUntil?.toISOString() ?? null;
+
+    let finalStatus = nextStatus;
+    const expiresNow = effectiveActiveUntil !== null && new Date(effectiveActiveUntil).getTime() <= Date.now();
+    if (expiresNow && finalStatus === "active") finalStatus = "deactivated";
+
+    await sql`
+      UPDATE users
+      SET name = ${name},
+          role = ${nextRole},
+          status = ${finalStatus},
+          active_until = ${effectiveActiveUntil},
+          updated_at = now()
+      WHERE id = ${id}
+    `;
+    if (finalStatus === "deactivated") {
       await sql`UPDATE sessions SET revoked_at = now() WHERE user_id = ${id} AND revoked_at IS NULL`;
     }
     await audit(actor.id, "staff.update", "user", id, {
-      before: { name: target.name, role: target.role, status: target.status },
-      after: { name, role: nextRole, status: nextStatus },
+      before: { name: target.name, role: target.role, status: target.status, activeUntil: target.active_until },
+      after: { name, role: nextRole, status: finalStatus, activeUntil: effectiveActiveUntil },
       requestId: c.get("requestId"),
     });
-    return ok(c, { id });
+    return ok(c, { id, activeUntil: effectiveActiveUntil, status: finalStatus });
   },
 );
+
+
+staffRoutes.delete("/:id", requireAuth, requirePermission("staff.manage"), async (c) => {
+  const id = c.req.param("id");
+  const actor = c.get("user");
+  if (actor.id === id) {
+    return fail(c, 400, "SELF_DELETE", "You cannot delete your own account.");
+  }
+  const existing = await sql<{ id: string; name: string; email: string; role: string; status: string }[]>`
+    SELECT id, name, email, role, status FROM users WHERE id = ${id} LIMIT 1
+  `;
+  const target = existing[0];
+  if (!target) return fail(c, 404, "NOT_FOUND", "User not found.");
+
+  if (target.role === "owner") {
+    const others = await countActiveOwners(id);
+    if (others === 0) {
+      return fail(c, 409, "LAST_OWNER", "This is the last active owner. Promote another owner first.");
+    }
+  }
+
+  // Hard delete only when nothing references the account — otherwise history would dangle.
+  const dependents = await sql<{ refs: number }[]>`
+    SELECT (
+      (SELECT COUNT(*) FROM sales WHERE cashier_id = ${id}) +
+      (SELECT COUNT(*) FROM stock_movements WHERE actor_id = ${id}) +
+      (SELECT COUNT(*) FROM purchases WHERE received_by = ${id}) +
+      (SELECT COUNT(*) FROM products WHERE created_by = ${id}) +
+      (SELECT COUNT(*) FROM expenses WHERE entered_by = ${id}) +
+      (SELECT COUNT(*) FROM returns WHERE processed_by = ${id}) +
+      (SELECT COUNT(*) FROM stock_counts WHERE created_by = ${id}) +
+      (SELECT COUNT(*) FROM audit_logs WHERE actor_id = ${id}) +
+      (SELECT COUNT(*) FROM settings WHERE updated_by = ${id})
+    )::int AS refs
+  `;
+  const refs = dependents[0]?.refs ?? 0;
+  if (refs > 0) {
+    return fail(c, 409, "HAS_ACTIVITY", `This account has ${refs} record${refs === 1 ? "" : "s"} in the store (sales, stock, expenses or audit). Deactivate it instead of deleting it.`);
+  }
+
+  await sql`DELETE FROM users WHERE id = ${id}`; // sessions / reset tokens / notification state cascade
+  await audit(actor.id, "staff.delete", "user", id, {
+    before: { name: target.name, email: target.email, role: target.role, status: target.status },
+    requestId: c.get("requestId"),
+  });
+  return ok(c, { id });
+});
 
 staffRoutes.post("/:id/reset-password", requireAuth, requirePermission("staff.manage"), async (c) => {
   const id = c.req.param("id");
@@ -126,7 +208,7 @@ staffRoutes.post("/:id/reset-password", requireAuth, requirePermission("staff.ma
   if (existing.length === 0) return fail(c, 404, "NOT_FOUND", "User not found.");
 
   const tempPassword = `cf-${randomBytes(9).toString("base64url")}`;
-  await sql`UPDATE users SET password_hash = ${hashPassword(tempPassword)} WHERE id = ${id}`;
+  await sql`UPDATE users SET password_hash = ${hashPassword(tempPassword)}, password_changed_at = now(), updated_at = now() WHERE id = ${id}`;
   await sql`UPDATE sessions SET revoked_at = now() WHERE user_id = ${id} AND revoked_at IS NULL`;
   await audit(actor.id, "staff.reset_password", "user", id, { requestId: c.get("requestId") });
   return ok(c, { tempPassword });
