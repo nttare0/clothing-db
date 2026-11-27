@@ -1,3 +1,7 @@
+import { clearApiCache, readApiCache, writeApiCache } from "./api-cache";
+import { isDemoActive, markDemoWorked, setDemoActive } from "./demo-state";
+import { demoApiGet, demoCompletedSale } from "./demo-fixtures";
+
 export type ApiErrorShape = { code: string; message: string; requestId?: string; retryAfter?: number; attemptsLeft?: number };
 
 export class ApiError extends Error {
@@ -20,6 +24,16 @@ export class ApiError extends Error {
   }
 }
 
+/** Runtime escape hatch for the demo banner / layout — re-exported for convenience. */
+export { setDemoActive };
+
+/** Paths that should never trip the "user started working" demo exit. */
+const DEMO_NEUTRAL_PREFIXES = ["/auth/", "/demo/", "/notifications/"];
+
+function looksLikeDemoIdPath(path: string): boolean {
+  return /de000000-/.test(path);
+}
+
 /**
  * Client-side wrapper around the ClothFlow API.
  * All requests are same-origin (/api/*) and proxied to the API service;
@@ -29,6 +43,34 @@ export async function api<T>(
   path: string,
   options: { method?: string; body?: unknown; idempotencyKey?: string } = {},
 ): Promise<T> {
+  const method = options.method ?? "GET";
+  const demo = isDemoActive();
+
+  // ----- demo mode: serve fixtures for reads, simulate writes that would be invalid -----
+  if (demo) {
+    if (method === "GET") {
+      const fixture = demoApiGet(path);
+      if (fixture !== undefined) return fixture as T;
+      // no fixture → fall through to the real API (settings, staff, audit)
+    } else {
+      if (path === "/sales" && method === "POST") {
+        const receipt = demoCompletedSale(options.body);
+        markDemoWorked(); // the owner completed their first (demo) sale — demo ends here
+        return receipt as T;
+      }
+      if (path.startsWith("/notifications/")) {
+        return { ok: true } as T; // demo notifications are read-state local noise
+      }
+    }
+  }
+
+  // ----- GET cache (fresh within 60s; cleared by any successful mutation) -----
+  const cacheKey = `${method}:${path}`;
+  if (method === "GET") {
+    const cached = readApiCache(cacheKey);
+    if (cached !== undefined) return cached as T;
+  }
+
   const headers: Record<string, string> = {};
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey;
@@ -36,7 +78,7 @@ export async function api<T>(
   let res: Response;
   try {
     res = await fetch(`/api${path}`, {
-      method: options.method ?? "GET",
+      method,
       headers,
       credentials: "same-origin",
       cache: "no-store",
@@ -70,7 +112,20 @@ export async function api<T>(
     throw new ApiError(res.status, shape);
   }
 
-  return (payload?.data ?? (payload as unknown)) as T;
+  const data = (payload?.data ?? (payload as unknown)) as T;
+
+  if (method === "GET") {
+    writeApiCache(cacheKey, data);
+  } else {
+    clearApiCache();
+    // Any successful real mutation ends the demo (markDemoWorked is a no-op
+    // when the demo was already off).
+    if (!DEMO_NEUTRAL_PREFIXES.some((prefix) => path.startsWith(prefix)) && !looksLikeDemoIdPath(path)) {
+      markDemoWorked();
+    }
+  }
+
+  return data;
 }
 
 export function formatRWF(amount: number | string | null | undefined): string {

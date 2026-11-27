@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 import { roleCan, type Permission } from "@/lib/permissions";
+import { setDemoActive, useDemoActive, dismissDemo } from "@/lib/demo-state";
 import { useOnline } from "@/lib/use-online";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -98,14 +99,25 @@ const NAV: { group: string; items: NavItem[] }[] = [
 
 type Me = { name: string | null; email: string; role: string | null };
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, demoActive }: { children: React.ReactNode; demoActive: boolean }) {
+  // Sync the module-level demo flag during render (before any child effect fires),
+  // so pages fetch fixtures on the very first paint of a fresh store.
+  if (typeof window !== "undefined") {
+    setDemoActive(demoActive);
+  }
   const pathname = usePathname();
   const router = useRouter();
   const online = useOnline();
   const [open, setOpen] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
   const [unread, setUnread] = useState<number | null>(null);
-  const [demoActive, setDemoActive] = useState(false);
+  const demoOn = useDemoActive();
+  // Close the mobile menu on navigation — state adjusted during render (React-endorsed pattern).
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (lastPathname !== pathname) {
+    setLastPathname(pathname);
+    setOpen(false);
+  }
 
   useEffect(() => {
     api<Me>("/auth/me")
@@ -114,9 +126,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     api<{ unread: number }>("/notifications/unread-count")
       .then((r) => setUnread(r.unread))
       .catch(() => setUnread(null));
-    api<{ active: boolean }>("/demo")
-      .then((r) => setDemoActive(r.active))
-      .catch(() => setDemoActive(false));
   }, [pathname]);
 
   // While the role is unknown, keep skeleton-free but hide restricted links rather than flash them.
@@ -124,10 +133,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ...section,
     items: section.items.filter((item) => !item.permission || roleCan(me?.role, item.permission)),
   })).filter((section) => section.items.length > 0);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   const initials = (me?.name ?? me?.email ?? "S")
     .split(/[\s@.]+/)
@@ -317,7 +322,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         ) : null}
 
-        {demoActive ? (
+        {demoOn ? (
           <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 bg-primary/5 px-4 py-2 text-xs text-primary md:px-6 print:hidden">
             <span>
               <strong>Demo mode.</strong> Sample products, stock and sales are shown so you can explore.
@@ -326,11 +331,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               className="shrink-0 font-semibold underline underline-offset-2 hover:text-primary/80"
-              onClick={() => {
-                api("/demo/remove", { method: "POST" })
-                  .then(() => setDemoActive(false))
-                  .catch(() => {});
-              }}
+              onClick={() => dismissDemo()}
             >
               Remove demo data now
             </button>

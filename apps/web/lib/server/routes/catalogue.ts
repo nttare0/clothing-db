@@ -4,7 +4,6 @@ import { sql } from "../db";
 import { audit, fail, ok, requireAuth, requirePermission } from "../http";
 import { zValidator } from "@hono/zod-validator";
 import { hook } from "../validate";
-import { maybeRemoveDemo } from "../demo";
 
 // ---------- Categories ----------
 export const categoryRoutes = new Hono();
@@ -350,7 +349,6 @@ productRoutes.post(
         after: { name: body.name.trim(), variantCount: body.variants.length },
         requestId: c.get("requestId"),
       });
-      await maybeRemoveDemo(user.id, c.get("requestId"));
       return ok(c, { id: created }, 201);
     } catch (err: unknown) {
       const mapped = mapConstraintError(err);
