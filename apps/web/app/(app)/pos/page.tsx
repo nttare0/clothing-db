@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  SearchIcon,
   ScanBarcodeIcon,
   PlusIcon,
   MinusIcon,
@@ -23,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { ErrorAlert } from "@/components/state";
+import { SearchInput } from "@/components/search-input";
 
 type SearchResult = {
   variantId: string;
@@ -32,6 +32,8 @@ type SearchResult = {
   price: number;
   sellable: number;
 };
+
+type CatalogItem = SearchResult & { brand: string | null; categoryId: string | null; category: string | null };
 
 type CartLine = SearchResult & { qty: number };
 
@@ -69,6 +71,13 @@ export default function PosPage() {
   const [payments, setPayments] = useState<Payment[]>([
     { id: "p1", method: "cash", amount: "", reference: "" },
   ]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [browseCategory, setBrowseCategory] = useState("");
+  const [browseItems, setBrowseItems] = useState<CatalogItem[]>([]);
+  const [browseTotal, setBrowseTotal] = useState(0);
+  const [browsePage, setBrowsePage] = useState(1);
+  const [browseLoading, setBrowseLoading] = useState(false);
+  const [browseLoadingMore, setBrowseLoadingMore] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sale, setSale] = useState<CompletedSale | null>(null);
@@ -105,6 +114,59 @@ export default function PosPage() {
     }, 200);
     return () => clearTimeout(t);
   }, [query]);
+
+  // Categories for the browse filter — fetched once; empty list just hides the chips.
+  useEffect(() => {
+    api<{ items: { id: string; name: string; active?: boolean }[] }>("/categories")
+      .then((r) => setCategories(r.items.filter((c) => c.active !== false).map((c) => ({ id: c.id, name: c.name }))))
+      .catch(() => setCategories([]));
+  }, []);
+
+  const BROWSE_SIZE = 48;
+
+  // Browsable catalogue: what you see when the search box is empty.
+  useEffect(() => {
+    if (query.trim().length >= 2) return; // search mode takes over
+    let cancelled = false;
+    const t = setTimeout(() => {
+      setBrowseLoading(true); // async callback — safe setState
+      const qs = new URLSearchParams({ page: "1", pageSize: String(BROWSE_SIZE) });
+      if (browseCategory) qs.set("categoryId", browseCategory);
+      api<{ items: CatalogItem[]; total: number }>(`/pos/catalog?${qs}`)
+        .then((r) => {
+          if (cancelled) return;
+          setBrowseItems(r.items);
+          setBrowseTotal(r.total);
+          setBrowsePage(1);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setBrowseItems([]);
+          setBrowseTotal(0);
+        })
+        .finally(() => {
+          if (!cancelled) setBrowseLoading(false);
+        });
+    }, 150);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [browseCategory, query]);
+
+  function loadMoreBrowse() {
+    setBrowseLoadingMore(true);
+    const qs = new URLSearchParams({ page: String(browsePage + 1), pageSize: String(BROWSE_SIZE) });
+    if (browseCategory) qs.set("categoryId", browseCategory);
+    api<{ items: CatalogItem[]; total: number }>(`/pos/catalog?${qs}`)
+      .then((r) => {
+        setBrowseItems((cur) => (browsePage + 1 === 1 ? r.items : [...cur, ...r.items]));
+        setBrowseTotal(r.total);
+        setBrowsePage((p) => p + 1);
+      })
+      .catch(() => toast.error("We couldn't load more products", { description: "Check your connection and try again." }))
+      .finally(() => setBrowseLoadingMore(false));
+  }
 
   function addToCart(item: SearchResult, qty = 1) {
     setCart((lines) => {
@@ -187,13 +249,13 @@ export default function PosPage() {
       if (err instanceof ApiError) {
         if (err.status === 0 || err.status >= 500) {
           setError(
-            "We could not confirm the sale. Check Sales history for a receipt before trying again — resubmitting could create a duplicate.",
+            "We couldn't confirm the sale went through. Please check Sales history for a receipt before trying again — if it isn't listed, try again.",
           );
         } else {
           setError(err.message);
         }
       } else {
-        setError("We could not confirm the sale. Check Sales history before trying again.");
+        setError("We couldn't confirm the sale went through. Please check Sales history before trying again.");
       }
     } finally {
       setSubmitting(false);
@@ -229,9 +291,9 @@ export default function PosPage() {
               {sale.discountTotal > 0 ? <div className="flex justify-between"><span>Discount</span><span>-{formatRWF(sale.discountTotal)}</span></div> : null}
               <div className="flex justify-between font-bold"><span>Total</span><span>{formatRWF(sale.total)}</span></div>
               {sale.payments.map((p, i) => (
-                <div key={i} className="flex justify-between text-xs">
-                  <span>{METHODS.find((m) => m.id === p.method)?.label ?? p.method}{p.reference ? ` · ${p.reference}` : ""}</span>
-                  <span>{formatRWF(p.amount)}</span>
+                <div key={i} className="flex items-baseline justify-between gap-2 text-xs">
+                  <span className="min-w-0 truncate" title={p.reference ? `${METHODS.find((m) => m.id === p.method)?.label ?? p.method} · ${p.reference}` : undefined}>{METHODS.find((m) => m.id === p.method)?.label ?? p.method}{p.reference ? ` · ${p.reference}` : ""}</span>
+                  <span className="shrink-0">{formatRWF(p.amount)}</span>
                 </div>
               ))}
               {sale.changeDue > 0 ? <div className="flex justify-between"><span>Change due</span><span>{formatRWF(sale.changeDue)}</span></div> : null}
@@ -296,7 +358,7 @@ export default function PosPage() {
                   <Input
                     className="col-span-3"
                     aria-label="Reference (optional)"
-                    placeholder="Ref…"
+                    placeholder="e.g. MOMO-2841"
                     value={payment.reference}
                     onChange={(e) => updatePayment(payment.id, { reference: e.target.value })}
                   />
@@ -348,6 +410,72 @@ export default function PosPage() {
     );
   }
 
+  // One tile design shared by search results and the browsable catalogue.
+  function renderTile(item: SearchResult) {
+    return (
+      <li key={item.variantId}>
+        <button
+          onClick={() => addToCart(item, 1)}
+          disabled={item.sellable <= 0}
+          className="flex w-full flex-col gap-1 rounded-xl border border-border bg-card p-3 text-left transition-colors enabled:hover:border-primary enabled:hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <span className="flex items-center justify-between gap-2">
+            <span className="truncate text-sm font-semibold">{item.productName}</span>
+            <Badge variant={item.sellable === 0 ? "destructive" : item.sellable <= 3 ? "warning" : "success"} className="tabular-nums">
+              {item.sellable} left
+            </Badge>
+          </span>
+          <span className="min-w-0 truncate text-xs text-muted-foreground" title={`${item.label} · ${item.sku}`}>{item.label} · {item.sku}</span>
+          <span className="text-base font-semibold tabular-nums">{item.price == null ? "—" : formatRWF(item.price)}</span>
+        </button>
+      </li>
+    );
+  }
+
+  const browseChip = (active: boolean) =>
+    `rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+      active
+        ? "border-primary bg-primary text-primary-foreground"
+        : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+    }`;
+
+  const browseGrid = (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter by category">
+        <button type="button" aria-pressed={browseCategory === ""} onClick={() => setBrowseCategory("")} className={browseChip(browseCategory === "")}>
+          All products
+        </button>
+        {categories.map((cat) => (
+          <button key={cat.id} type="button" aria-pressed={browseCategory === cat.id} onClick={() => setBrowseCategory(cat.id)} className={browseChip(browseCategory === cat.id)}>
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
+      {browseLoading ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">Loading products…</p>
+      ) : browseItems.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-10 text-center">
+          <ShoppingCartIcon className="size-8 text-muted-foreground" aria-hidden />
+          <p className="text-sm font-medium">No products here yet</p>
+          <p className="max-w-xs text-xs text-muted-foreground">Once products are added to the catalogue, you can tap them here to add them to the sale — no typing needed.</p>
+        </div>
+      ) : (
+        <>
+          <p className="text-xs text-muted-foreground">{browseTotal} product{browseTotal === 1 ? "" : "s"} · tap to add</p>
+          <ul className="grid gap-2 sm:grid-cols-2">
+            {browseItems.map(renderTile)}
+          </ul>
+          {browseItems.length < browseTotal ? (
+            <Button variant="outline" className="mx-auto" disabled={browseLoadingMore} onClick={loadMoreBrowse}>
+              {browseLoadingMore ? "Loading…" : `Show more (${browseTotal - browseItems.length} left)`}
+            </Button>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+
   /* ---------- cart step ---------- */
   const cartPane = (
     <Card className="flex h-full flex-col overflow-hidden">
@@ -377,11 +505,11 @@ export default function PosPage() {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{line.productName}</p>
-                    <p className="text-xs text-muted-foreground">{line.label} · {line.sku}</p>
+                    <p className="max-w-56 truncate text-xs text-muted-foreground" title={`${line.label} · ${line.sku}`}>{line.label} · {line.sku}</p>
                   </div>
-                  <button onClick={() => setCart((l) => l.filter((x) => x.variantId !== line.variantId))} aria-label="Remove item" className="text-muted-foreground hover:text-destructive">
-                    <Trash2Icon className="size-4" />
-                  </button>
+                  <Button variant="ghost" size="xs" onClick={() => setCart((l) => l.filter((x) => x.variantId !== line.variantId))} aria-label={`Remove ${line.productName} ${line.label} from the sale`} className="gap-1.5 text-muted-foreground hover:text-destructive">
+                    <Trash2Icon className="size-4" aria-hidden /> Remove
+                  </Button>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
@@ -415,7 +543,7 @@ export default function PosPage() {
         </div>
         <div className="mt-2">
           <Label htmlFor="customer" className="text-xs text-muted-foreground">Customer phone (optional)</Label>
-          <Input id="customer" inputMode="tel" placeholder="07xx xxx xxx" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="mt-1 h-9" />
+          <Input id="customer" inputMode="tel" placeholder="+250 788 000 000" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="mt-1 h-9" />
         </div>
         <Button className="mt-3 w-full" size="lg" disabled={cart.length === 0} onClick={() => setStep("payment")}>
           Proceed to payment <ChevronRightIcon aria-hidden />
@@ -428,54 +556,33 @@ export default function PosPage() {
     <div className="mx-auto flex h-[calc(100dvh-3.5rem)] w-full max-w-7xl flex-col gap-3 p-3 sm:p-4 lg:flex-row">
       {/* Catalogue side */}
       <div className={`flex min-h-0 flex-1 flex-col gap-3 ${mobileView === "cart" ? "hidden lg:flex" : "flex"}`}>
-        <div className="relative">
-          <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <Input
-            ref={searchRef}
-            autoFocus
-            type="text"
-            inputMode="search"
-            aria-label="Search or scan barcode"
-            placeholder="Scan barcode or search product / SKU…"
-            className="h-12 pl-11 text-base"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={onSearchKeyDown}
-          />
-        </div>
+        <SearchInput
+          size="lg"
+          inputRef={searchRef}
+          autoFocus
+          ariaLabel="Search or scan barcode"
+          placeholder="Scan barcode or search product / SKU…"
+          value={query}
+          onChange={setQuery}
+          onKeyDown={onSearchKeyDown}
+        />
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           {searching ? (
             <p className="py-8 text-center text-sm text-muted-foreground">Searching…</p>
           ) : results.length > 0 ? (
             <ul className="grid gap-2 sm:grid-cols-2">
-              {results.map((item) => (
-                <li key={item.variantId}>
-                  <button
-                    onClick={() => addToCart(item, 1)}
-                    disabled={item.sellable <= 0}
-                    className="flex w-full flex-col gap-1 rounded-xl border border-border bg-card p-3 text-left transition-colors enabled:hover:border-primary enabled:hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-semibold">{item.productName}</span>
-                      <Badge variant={item.sellable === 0 ? "destructive" : item.sellable <= 3 ? "warning" : "success"} className="tabular-nums">
-                        {item.sellable} left
-                      </Badge>
-                    </span>
-                    <span className="text-xs text-muted-foreground">{item.label} · {item.sku}</span>
-                    <span className="text-base font-semibold tabular-nums">{formatRWF(item.price)}</span>
-                  </button>
-                </li>
-              ))}
+              {results.map(renderTile)}
             </ul>
           ) : searched ? (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              No match for “{query.trim()}”. Check spelling, SKU or barcode.
-            </p>
+            <div className="flex flex-col items-center gap-3 py-10 text-center">
+              <p className="text-sm text-muted-foreground">
+                No match for “{query.trim()}”. Check the spelling, SKU or barcode.
+              </p>
+              <Button variant="outline" onClick={() => setQuery("")}>Browse all products</Button>
+            </div>
           ) : (
-            <p className="py-10 text-center text-sm text-muted-foreground">
-              Type at least 2 characters, or scan a barcode.
-            </p>
+            browseGrid
           )}
         </div>
 

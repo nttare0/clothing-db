@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeftIcon, PackagePlusIcon, ScanBarcodeIcon, SearchIcon, Trash2Icon } from "lucide-react";
+import { ArrowLeftIcon, PackagePlusIcon, ScanBarcodeIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorAlert } from "@/components/state";
+import { SearchInput } from "@/components/search-input";
 
 type Option = {
   variantId: string;
@@ -132,7 +133,7 @@ function StockInForm() {
       toast.success("Stock received", { description: "Quantities are available for sale immediately." });
       window.location.assign(`/stock-movements?reference=${result.id}`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save the receipt. Try again.");
+      setError(err instanceof ApiError ? err.message : "We couldn't save the receipt. Nothing was recorded — please try again.");
       setPending(false);
     }
   }
@@ -157,17 +158,13 @@ function StockInForm() {
           <CardDescription>Scan a barcode or search by product name / SKU.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
-          <div className="relative">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              aria-label="Search products to add"
-              autoFocus
-              placeholder="Scan barcode or search…"
-              className="pl-9"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            ariaLabel="Search products to add"
+            autoFocus
+            placeholder="Scan barcode or search…"
+            value={query}
+            onChange={setQuery}
+          />
           {results.length > 0 ? (
             <ul className="flex flex-col gap-1.5 rounded-xl border border-border p-2">
               {results.map((r) => (
@@ -205,12 +202,12 @@ function StockInForm() {
               {lines.map((line, i) => (
                 <li key={line.variantId} className="grid grid-cols-12 items-end gap-2 py-2">
                   <div className="col-span-12 sm:col-span-4">
-                    <p className="text-sm font-medium">{line.label}</p>
-                    <p className="text-xs text-muted-foreground">{line.sku}</p>
+                    <p className="max-w-64 truncate text-sm font-medium" title={line.label}>{line.label}</p>
+                    <p className="max-w-64 truncate text-xs text-muted-foreground" title={line.sku}>{line.sku}</p>
                   </div>
                   <div className="col-span-4 sm:col-span-2">
                     <Label htmlFor={`qty-${i}`} className="text-xs">Qty *</Label>
-                    <Input id={`qty-${i}`} inputMode="numeric" className="tabular-nums" value={line.quantity} onChange={(e) => setLines((rows) => rows.map((r, j) => (j === i ? { ...r, quantity: e.target.value } : r)))} />
+                    <Input id={`qty-${i}`} inputMode="numeric" placeholder="1" className="tabular-nums" value={line.quantity} onChange={(e) => setLines((rows) => rows.map((r, j) => (j === i ? { ...r, quantity: e.target.value } : r)))} />
                   </div>
                   <div className="col-span-6 sm:col-span-4">
                     <Label htmlFor={`cost-${i}`} className="text-xs">Unit cost (RWF)</Label>
@@ -241,11 +238,11 @@ function StockInForm() {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="reference">Reference</Label>
-            <Input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="GRN-0007 / supplier invoice no." />
+            <Input id="reference" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="GRN-0007 or supplier invoice no." />
           </div>
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="note">Note</Label>
-            <Input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional note for the ledger" />
+            <Input id="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Invoice attached — agreed 14-day terms" />
           </div>
         </CardContent>
       </Card>

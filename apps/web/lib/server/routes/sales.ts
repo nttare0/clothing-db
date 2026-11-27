@@ -65,7 +65,7 @@ salesRoutes.post(
     const user = c.get("user");
     const idempotencyKey = c.req.header("Idempotency-Key")?.trim() || null;
     if (!idempotencyKey) {
-      return fail(c, 400, "IDEMPOTENCY_KEY_REQUIRED", "Missing Idempotency-Key header.");
+      return fail(c, 400, "IDEMPOTENCY_KEY_REQUIRED", "That request was missing something it needed. Please try again.");
     }
 
     // Replay protection: same key returns the original sale, never a second one.

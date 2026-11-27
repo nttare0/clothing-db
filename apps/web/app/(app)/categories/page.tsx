@@ -52,7 +52,7 @@ export default function CategoriesPage() {
     api<{ items: Category[] }>("/categories")
       .then((r) => setItems(r.items))
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load categories."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the categories. Check your internet connection and try again."),
       );
   }, []);
 
@@ -101,7 +101,7 @@ export default function CategoriesPage() {
       setDialogOpen(false);
       load();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not save the category.");
+      setFormError(err instanceof ApiError ? err.message : "We couldn't save the category. Please try again.");
     } finally {
       setPending(false);
     }
@@ -113,7 +113,7 @@ export default function CategoriesPage() {
       toast.success("Category archived");
       load();
     } catch (err) {
-      toast.error("Could not archive", {
+      toast.error("We couldn't archive", {
         description: err instanceof ApiError ? err.message : "Try again.",
       });
     }
@@ -190,11 +190,11 @@ export default function CategoriesPage() {
           <form onSubmit={save} className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="category-name">Name *</Label>
-              <Input id="category-name" autoFocus required value={name} onChange={(e) => setName(e.target.value)} placeholder="T-shirts" />
+              <Input id="category-name" autoFocus required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. T-shirts" />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="category-description">Description</Label>
-              <Input id="category-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional" />
+              <Input id="category-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Everyday tees and vests" />
             </div>
             {formError ? <p role="alert" className="text-sm text-destructive">{formError}</p> : null}
             <DialogFooter>

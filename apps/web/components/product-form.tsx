@@ -156,7 +156,7 @@ export function ProductForm({
           setFieldErrors((prev) => ({ ...prev, variants: err.message }));
         }
       } else {
-        setError("Could not save the product. Check the connection and try again.");
+        setError("We couldn't save the product. Check your internet connection and try again.");
       }
       setPending(false);
     }
@@ -178,7 +178,7 @@ export function ProductForm({
         </Button>
       </div>
 
-      {error ? <ErrorAlert title="Could not save the product" message={error} /> : null}
+      {error ? <ErrorAlert title="We couldn't save the product" message={error} /> : null}
 
       <Card>
         <CardHeader>
@@ -188,7 +188,7 @@ export function ProductForm({
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5 sm:col-span-2">
             <Label htmlFor="name">Name <span aria-hidden className="text-destructive">*</span></Label>
-            <Input id="name" required value={name} onChange={(e) => { setName(e.target.value); setFieldErrors((p) => { const n = { ...p }; delete n.name; return n; }); }} placeholder="Classic cotton tee" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "name-error" : undefined} />
+            <Input id="name" required value={name} onChange={(e) => { setName(e.target.value); setFieldErrors((p) => { const n = { ...p }; delete n.name; return n; }); }} placeholder="e.g. Classic cotton tee" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name ? "name-error" : undefined} />
             {fieldErrors.name ? <p id="name-error" className="text-xs text-destructive">{fieldErrors.name}</p> : null}
           </div>
 
@@ -251,7 +251,7 @@ export function ProductForm({
                 </div>
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
                   <Label htmlFor={`barcode-${i}`}>Barcode</Label>
-                  <Input id={`barcode-${i}`} inputMode="numeric" value={v.barcode} onChange={(e) => updateVariant(i, { barcode: e.target.value })} placeholder="Optional" />
+                  <Input id={`barcode-${i}`} inputMode="numeric" value={v.barcode} onChange={(e) => updateVariant(i, { barcode: e.target.value })} placeholder="e.g. 6287001000001" />
                 </div>
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
                   <Label htmlFor={`price-${i}`}>Price (RWF)</Label>
@@ -259,7 +259,7 @@ export function ProductForm({
                 </div>
                 <div className="flex flex-col gap-1.5 sm:col-span-1">
                   <Label htmlFor={`reorder-${i}`}>Reorder</Label>
-                  <Input id={`reorder-${i}`} inputMode="numeric" value={v.reorderLevel} onChange={(e) => updateVariant(i, { reorderLevel: e.target.value })} />
+                  <Input id={`reorder-${i}`} inputMode="numeric" placeholder="0" value={v.reorderLevel} onChange={(e) => updateVariant(i, { reorderLevel: e.target.value })} />
                 </div>
                 <div className="col-span-2 flex items-center justify-between gap-2 sm:col-span-12">
                   {fieldErrors[`variant-${i}`] ? (

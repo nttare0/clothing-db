@@ -1,21 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
+function subscribe(listener: () => void): () => void {
+  window.addEventListener("online", listener);
+  window.addEventListener("offline", listener);
+  return () => {
+    window.removeEventListener("online", listener);
+    window.removeEventListener("offline", listener);
+  };
+}
+
+function getSnapshot(): boolean {
+  return navigator.onLine;
+}
+
+function getServerSnapshot(): boolean {
+  return true;
+}
+
+/** Reactive browser online status, hydration-safe. */
 export function useOnline(): boolean {
-  const [online, setOnline] = useState(true);
-
-  useEffect(() => {
-    setOnline(navigator.onLine);
-    const up = () => setOnline(true);
-    const down = () => setOnline(false);
-    window.addEventListener("online", up);
-    window.addEventListener("offline", down);
-    return () => {
-      window.removeEventListener("online", up);
-      window.removeEventListener("offline", down);
-    };
-  }, []);
-
-  return online;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

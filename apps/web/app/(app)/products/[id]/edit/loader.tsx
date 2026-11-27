@@ -53,7 +53,7 @@ export function ProductFormLoader() {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : "Could not load the product.");
+        setError(err instanceof ApiError ? err.message : "We couldn't load the product. Check your internet connection and try again.");
       });
     return () => {
       cancelled = true;

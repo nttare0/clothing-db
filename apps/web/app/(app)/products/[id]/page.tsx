@@ -85,7 +85,7 @@ export default function ProductDetailPage() {
         setMovements(m.items);
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load the product."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the product. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [params.id]);
@@ -102,7 +102,7 @@ export default function ProductDetailPage() {
       router.refresh();
       load();
     } catch (err) {
-      toast.error("Could not deactivate", {
+      toast.error("We couldn't deactivate", {
         description: err instanceof ApiError ? err.message : "Try again.",
       });
     } finally {
@@ -265,7 +265,7 @@ export default function ProductDetailPage() {
                     <TableCell className={`tabular-nums ${m.onHandDelta >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                       {m.onHandDelta >= 0 ? "+" : ""}{m.onHandDelta}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{m.reference ?? "—"}</TableCell>
+                    <TableCell className="max-w-40 break-all text-muted-foreground">{m.reference ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{m.actor ?? "—"}</TableCell>
                   </TableRow>
                 ))}

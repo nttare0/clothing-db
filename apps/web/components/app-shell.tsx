@@ -24,33 +24,24 @@ import {
   MenuIcon,
   XIcon,
   BellIcon,
-  ChevronDownIcon,
-  LogOutIcon,
-  UserIcon,
   WifiOffIcon,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { roleCan, type Permission } from "@/lib/permissions";
+import { useDemoActive, dismissDemo } from "@/lib/demo-state";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useOnline } from "@/lib/use-online";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 type NavItem = {
   label: string;
   href?: string;
   icon: LucideIcon;
-  stage?: string; // set when the screen lands in a later build stage
+  /** Permission required to SEE the item. Items the role lacks are hidden entirely. */
+  permission?: Permission;
 };
 
 const NAV: { group: string; items: NavItem[] }[] = [
@@ -61,36 +52,36 @@ const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "Store operations",
     items: [
-      { label: "Inventory", href: "/inventory", icon: ShirtIcon },
-      { label: "Categories", href: "/categories", icon: TagsIcon },
-      { label: "Stock In", href: "/stock-in", icon: PackagePlusIcon },
-      { label: "Sales / POS", href: "/pos", icon: ShoppingCartIcon },
-      { label: "Stock Movements", href: "/stock-movements", icon: ArrowLeftRightIcon },
-      { label: "Returns", icon: Undo2Icon, stage: "Stage 5" },
-      { label: "Adjustments", icon: SlidersHorizontalIcon, stage: "Stage 5" },
-      { label: "Stock Count", icon: ClipboardCheckIcon, stage: "Stage 5" },
+      { label: "Inventory", href: "/inventory", icon: ShirtIcon, permission: "movements.view" },
+      { label: "Categories", href: "/categories", icon: TagsIcon, permission: "products.manage" },
+      { label: "Stock In", href: "/stock-in", icon: PackagePlusIcon, permission: "stock.receive" },
+      { label: "Sales / POS", href: "/pos", icon: ShoppingCartIcon, permission: "pos.sale" },
+      { label: "Stock Movements", href: "/stock-movements", icon: ArrowLeftRightIcon, permission: "movements.view" },
+      { label: "Returns", href: "/returns", icon: Undo2Icon, permission: "returns.process" },
+      { label: "Adjustments", href: "/adjustments", icon: SlidersHorizontalIcon, permission: "adjustments.manage" },
+      { label: "Stock Count", href: "/stock-count", icon: ClipboardCheckIcon, permission: "counts.manage" },
     ],
   },
   {
     group: "Relationships",
     items: [
-      { label: "Suppliers", icon: TruckIcon, stage: "Stage 6" },
-      { label: "Customers", icon: UsersIcon, stage: "Stage 6" },
+      { label: "Suppliers", href: "/suppliers", icon: TruckIcon, permission: "suppliers.manage" },
+      { label: "Customers", href: "/customers", icon: UsersIcon, permission: "customers.manage" },
     ],
   },
   {
     group: "Business performance",
     items: [
-      { label: "Expenses", icon: ReceiptIcon, stage: "Stage 6" },
-      { label: "Reports", icon: BarChart3Icon, stage: "Stage 7" },
+      { label: "Expenses", href: "/expenses", icon: ReceiptIcon, permission: "expenses.manage" },
+      { label: "Reports", href: "/reports", icon: BarChart3Icon, permission: "reports.view" },
     ],
   },
   {
     group: "Administration",
     items: [
-      { label: "Staff & Permissions", icon: ShieldCheckIcon, stage: "Stage 6" },
-      { label: "Audit Logs", icon: ScrollTextIcon, stage: "Stage 6" },
-      { label: "Settings", icon: SettingsIcon, stage: "Stage 6" },
+      { label: "Staff & Permissions", href: "/staff", icon: ShieldCheckIcon, permission: "staff.manage" },
+      { label: "Audit Logs", href: "/audit-logs", icon: ScrollTextIcon, permission: "audit.view" },
+      { label: "Settings", href: "/settings", icon: SettingsIcon, permission: "settings.manage" },
       { label: "Help", href: "/help", icon: CircleHelpIcon },
     ],
   },
@@ -105,6 +96,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [me, setMe] = useState<Me | null>(null);
   const [unread, setUnread] = useState<number | null>(null);
+  const demoOn = useDemoActive();
+  // Close the mobile menu on navigation — state adjusted during render (React-endorsed pattern).
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (lastPathname !== pathname) {
+    setLastPathname(pathname);
+    setOpen(false);
+  }
 
   useEffect(() => {
     api<Me>("/auth/me")
@@ -113,11 +111,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     api<{ unread: number }>("/notifications/unread-count")
       .then((r) => setUnread(r.unread))
       .catch(() => setUnread(null));
-  }, []);
-
-  useEffect(() => {
-    setOpen(false);
   }, [pathname]);
+
+  // While the role is unknown, keep skeleton-free but hide restricted links rather than flash them.
+  const visibleNav = NAV.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !item.permission || roleCan(me?.role, item.permission)),
+  })).filter((section) => section.items.length > 0);
 
   const initials = (me?.name ?? me?.email ?? "S")
     .split(/[\s@.]+/)
@@ -125,16 +125,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     .slice(0, 2)
     .map((s) => s[0]?.toUpperCase())
     .join("");
-
-  async function signOut() {
-    try {
-      await api("/auth/signout", { method: "POST" });
-    } catch {
-      // sign-out is best-effort; leave the page either way
-    }
-    router.push("/signin");
-    router.refresh();
-  }
 
   const nav = (
     <nav aria-label="Primary" className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-4">
@@ -148,8 +138,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </span>
       </Link>
 
-      <div className="flex flex-col gap-5">
-        {NAV.map((section) => (
+      <div className="flex flex-col gap-5" aria-busy={me === null}>
+        {me === null
+          ? Array.from({ length: 3 }).map((_, gi) => (
+              <div key={gi} className="flex flex-col gap-1.5" aria-hidden>
+                <div className="mx-2 h-3 w-20 animate-pulse rounded bg-muted" />
+                {Array.from({ length: 4 }).map((_, li) => (
+                  <div key={li} className="h-9 animate-pulse rounded-lg bg-muted/70" />
+                ))}
+              </div>
+            ))
+          : visibleNav.map((section) => (
           <div key={section.group}>
             <p className="px-2 pb-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
               {section.group}
@@ -162,46 +161,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <>
                     <Icon className="size-[18px] shrink-0 text-current" aria-hidden />
                     <span className="truncate">{item.label}</span>
-                    {item.stage ? (
-                      <Badge variant="outline" className="ml-auto text-[10px] text-muted-foreground">
-                        {item.stage}
-                      </Badge>
-                    ) : null}
                   </>
                 );
-                if (item.href) {
-                  return (
-                    <li key={item.label}>
-                      <Link
-                        href={item.href}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "flex h-9 items-center gap-2.5 rounded-lg px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-                          active && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary",
-                        )}
-                      >
-                        {content}
-                      </Link>
-                    </li>
-                  );
-                }
                 return (
                   <li key={item.label}>
-                    <button
-                      type="button"
-                      disabled
-                      aria-disabled
-                      title="Planned for a later build stage"
-                      className="flex h-9 w-full cursor-not-allowed items-center gap-2.5 rounded-lg px-2 text-sm font-medium text-muted-foreground/60"
+                    <Link
+                      href={item.href!}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
+                        "flex h-9 items-center gap-2.5 rounded-lg px-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                        active && "bg-primary/10 text-primary hover:bg-primary/10 hover:text-primary",
+                      )}
                     >
                       {content}
-                    </button>
+                    </Link>
                   </li>
                 );
               })}
             </ul>
           </div>
-        ))}
+          ))}
       </div>
 
       <div className="mt-auto px-2 text-[11px] text-muted-foreground">
@@ -214,6 +193,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
+      >
+        Skip to content
+      </a>
+
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-card print:hidden lg:block">
         <div className="sticky top-0 h-screen">{nav}</div>
@@ -250,6 +236,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </p>
 
           <div className="ml-auto flex items-center gap-1.5">
+            <ThemeToggle />
             <Button
               variant="ghost"
               size="icon-sm"
@@ -265,42 +252,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : null}
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" className="gap-2 px-2" aria-label="Account menu">
-                    <Avatar className="size-7">
-                      <AvatarFallback className="text-[11px] font-semibold">{initials || "S"}</AvatarFallback>
-                    </Avatar>
-                    <span className="hidden max-w-32 truncate text-sm font-medium md:inline">
-                      {me?.name ?? "Staff"}
-                    </span>
-                    <ChevronDownIcon className="hidden size-4 md:inline" aria-hidden />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>
-                  <span className="block text-sm font-medium">{me?.name ?? "Staff account"}</span>
-                  <span className="block truncate text-xs font-normal text-muted-foreground">
-                    {me?.email ?? "Sign-in required"}
-                  </span>
-                  {me?.role ? (
-                    <span className="mt-1 inline-block text-[10px] uppercase tracking-wide text-muted-foreground">
-                      {me.role}
-                    </span>
-                  ) : null}
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => router.push("/profile")}>
-                  <UserIcon aria-hidden /> My profile
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut} variant="destructive">
-                  <LogOutIcon aria-hidden /> Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Link
+              href="/profile"
+              aria-label="Open your profile"
+              title="Open your profile"
+              className="flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Avatar className="size-7">
+                <AvatarFallback className="text-[11px] font-semibold">{initials || "S"}</AvatarFallback>
+              </Avatar>
+              <span className="hidden max-w-32 truncate md:inline">{me?.name ?? "Staff"}</span>
+            </Link>
           </div>
         </header>
 
@@ -311,7 +273,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         ) : null}
 
-        <main className="min-w-0 flex-1">{children}</main>
+        {demoOn ? (
+          <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/20 bg-primary/5 px-4 py-2 text-xs text-primary md:px-6 print:hidden">
+            <span>
+              <strong>Demo mode.</strong> Sample products, stock and sales are shown so you can explore.
+              They disappear automatically the moment you create your first product, receive stock, or ring up a sale.
+            </span>
+            <button
+              type="button"
+              className="shrink-0 font-semibold underline underline-offset-2 hover:text-primary/80"
+              onClick={() => dismissDemo()}
+            >
+              Remove demo data now
+            </button>
+          </div>
+        ) : null}
+
+        <main className="min-w-0 flex-1" id="main-content" tabIndex={-1}>{children}</main>
       </div>
     </div>
   );

@@ -2,11 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { PackagePlusIcon, SearchIcon, ReceiptTextIcon } from "lucide-react";
+import { PackagePlusIcon, ReceiptTextIcon } from "lucide-react";
 import { api, ApiError, formatRWF, formatDateTime } from "@/lib/api";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ErrorAlert, EmptyState } from "@/components/state";
+import { SearchInput } from "@/components/search-input";
 
 type ReceiptRow = {
   id: string;
@@ -55,7 +55,7 @@ export default function StockInListPage() {
         setTotal(r.total);
       })
       .catch((err: unknown) =>
-        setError(err instanceof ApiError ? err.message : "Could not load stock-in receipts."),
+        setError(err instanceof ApiError ? err.message : "We couldn't load the stock receipts. Check your internet connection and try again."),
       )
       .finally(() => setLoading(false));
   }, [query, reason, page]);
@@ -80,17 +80,13 @@ export default function StockInListPage() {
       </div>
 
       <div className="flex flex-col gap-2 md:flex-row md:items-center">
-        <div className="relative flex-1">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <Input
-            type="search"
-            aria-label="Search by reference"
-            placeholder="Search reference / GRN…"
-            className="pl-9"
-            value={query}
-            onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-          />
-        </div>
+        <SearchInput
+          className="flex-1"
+          ariaLabel="Search by reference"
+          placeholder="Search reference or GRN…"
+          value={query}
+          onChange={(v) => { setQuery(v); setPage(1); }}
+        />
         <NativeSelect
           aria-label="Filter by reason"
           value={reason}
@@ -136,7 +132,7 @@ export default function StockInListPage() {
                     <TableCell>
                       <span className="flex items-center gap-2 font-medium">
                         <ReceiptTextIcon className="size-4 text-muted-foreground" aria-hidden />
-                        {row.reference ?? row.id.slice(0, 8)}
+                        <span className="break-all">{row.reference ?? row.id.slice(0, 8)}</span>
                       </span>
                     </TableCell>
                     <TableCell><Badge variant="secondary">{row.reason.replaceAll("_", " ")}</Badge></TableCell>

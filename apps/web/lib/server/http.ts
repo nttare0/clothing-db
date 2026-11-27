@@ -38,8 +38,8 @@ export function fail(c: Context, status: number, code: string, message: string) 
 export async function findSessionUser(token: string | undefined): Promise<AuthedUser | null> {
   if (!token) return null;
   const token_hash = hashToken(token);
-  const rows = await sql<AuthedUser[]>`
-    SELECT u.id, u.name, u.email, u.role
+  const rows = await sql<(AuthedUser & { active_until: string | null })[]>`
+    SELECT u.id, u.name, u.email, u.role, u.active_until
     FROM sessions s
     JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ${token_hash}
@@ -48,7 +48,15 @@ export async function findSessionUser(token: string | undefined): Promise<Authed
       AND u.status = 'active'
     LIMIT 1
   `;
-  return rows[0] ?? null;
+  const row = rows[0];
+  if (!row) return null;
+  // Active period expired mid-session: deactivate lazily and drop the session.
+  if (row.active_until && new Date(row.active_until).getTime() <= Date.now()) {
+    await sql`UPDATE users SET status = 'deactivated', updated_at = now() WHERE id = ${row.id} AND status = 'active'`;
+    await sql`UPDATE sessions SET revoked_at = now() WHERE user_id = ${row.id} AND revoked_at IS NULL`;
+    return null;
+  }
+  return { id: row.id, name: row.name, email: row.email, role: row.role };
 }
 
 export const requireAuth: MiddlewareHandler = async (c, next) => {

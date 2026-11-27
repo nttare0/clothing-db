@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
       if (err instanceof ApiError && err.code === "RATE_LIMITED") {
         setError("Too many requests. Wait a minute and try again.");
       } else {
-        setError("Could not send reset instructions. Check the connection and try again.");
+        setError("We couldn't send the reset instructions. Check your internet connection and try again.");
       }
     } finally {
       setPending(false);

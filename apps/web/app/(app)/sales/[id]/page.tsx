@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { PrinterIcon, ArrowLeftIcon, ReceiptIcon } from "lucide-react";
+import { PrinterIcon, ArrowLeftIcon, ReceiptIcon, Undo2Icon } from "lucide-react";
 import { api, ApiError, formatRWF, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +18,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ErrorAlert } from "@/components/state";
+
+type StoreInfo = {
+  store_name?: string;
+  store_address?: string;
+  store_phone?: string;
+  receipt_footer?: string;
+};
 
 type SaleDetail = {
   id: string;
@@ -45,6 +52,8 @@ type SaleDetail = {
 export default function SaleDetailPage() {
   const params = useParams<{ id: string }>();
   const [sale, setSale] = useState<SaleDetail | null>(null);
+  const [store, setStore] = useState<StoreInfo>({});
+  const [canReturn, setCanReturn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,9 +62,16 @@ export default function SaleDetailPage() {
     setError(null);
     api<SaleDetail>(`/sales/${params.id}`)
       .then(setSale)
-      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "Could not load the sale."))
+      .catch((err: unknown) => setError(err instanceof ApiError ? err.message : "We couldn't load this sale. Check your internet connection and try again."))
       .finally(() => setLoading(false));
   }, [params.id]);
+
+  useEffect(() => {
+    api<StoreInfo>("/settings").then(setStore).catch(() => setStore({}));
+    api<{ role?: string }>("/auth/me")
+      .then((m) => setCanReturn(["owner", "manager", "cashier"].includes(m.role ?? "")))
+      .catch(() => setCanReturn(false));
+  }, []);
 
   useEffect(() => {
     load();
@@ -91,6 +107,11 @@ export default function SaleDetailPage() {
         </Link>
         <div className="flex items-center gap-2">
           <Badge variant="success">Completed</Badge>
+          {canReturn ? (
+            <Link href={`/returns/new?sale=${sale.id}`} className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-sm font-medium hover:bg-muted">
+              <Undo2Icon className="size-4" aria-hidden /> Start return
+            </Link>
+          ) : null}
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <PrinterIcon aria-hidden /> Reprint
           </Button>
@@ -104,7 +125,9 @@ export default function SaleDetailPage() {
             <span className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground print:hidden">
               <ReceiptIcon className="size-5" aria-hidden />
             </span>
-            <p className="text-lg font-bold">ClothFlow</p>
+            <p className="text-lg font-bold">{store.store_name ?? "ClothFlow Store"}</p>
+            {store.store_address ? <p className="text-[10px]">{store.store_address}</p> : null}
+            {store.store_phone ? <p className="text-[10px]">{store.store_phone}</p> : null}
             <p className="text-xs">Receipt #{sale.receiptNumber}</p>
             <p className="text-xs">{formatDateTime(sale.completedAt)}</p>
             {sale.cashierName ? <p className="text-xs">Served by {sale.cashierName}</p> : null}
@@ -125,7 +148,7 @@ export default function SaleDetailPage() {
                 <TableRow key={item.id}>
                   <TableCell className="py-1">
                     <span className="block font-semibold">{item.label}</span>
-                    <Link href={`/products/${item.productId}`} className="text-[10px] text-muted-foreground print:no-underline hover:underline">
+                    <Link href={`/products/${item.productId}`} className="break-all text-[10px] text-muted-foreground print:no-underline hover:underline">
                       {item.sku}
                     </Link>
                   </TableCell>
@@ -163,7 +186,7 @@ export default function SaleDetailPage() {
           </div>
 
           <p className="border-t border-dashed border-border pt-3 text-center text-[10px] text-muted-foreground">
-            #{sale.receiptNumber} · Thank you for shopping with us
+            #{sale.receiptNumber} · {store.receipt_footer ?? "Thank you for shopping with us"}
           </p>
         </CardContent>
       </Card>

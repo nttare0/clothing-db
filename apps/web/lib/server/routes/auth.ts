@@ -17,7 +17,7 @@ import {
   ok,
   requireAuth,
 } from "../http";
-import { rateLimit } from "../rate-limit";
+import { rateLimit, signinLockSeconds, recordSigninFailure, clearSigninFailures } from "../rate-limit"; // rateLimit still guards forgot-password
 import { zValidator } from "@hono/zod-validator";
 import { hook } from "../validate";
 
@@ -34,23 +34,47 @@ authRoutes.post(
   async (c) => {
     const { identifier, password } = c.req.valid("json");
     const key = identifier.toLowerCase();
-    if (!rateLimit(`signin:${key}`, 10, 5 * 60_000)) {
-      return fail(c, 429, "RATE_LIMITED", "Too many attempts. Wait a few minutes and try again.");
+
+    // Account lockout: 5 wrong passwords locks this account for 60 seconds.
+    const lockSeconds = signinLockSeconds(key);
+    if (lockSeconds !== null) {
+      return c.json(
+        { error: { code: "LOCKED", message: `Too many wrong passwords. Try again in ${lockSeconds} seconds.`, requestId: c.get("requestId"), retryAfter: lockSeconds } },
+        429,
+      );
     }
 
     const rows = await sql<
-      { id: string; name: string | null; email: string; role: string; password_hash: string; status: string }[]
+      { id: string; name: string | null; email: string; role: string; password_hash: string; status: string; active_until: string | null }[]
     >`
-      SELECT id, name, email, role, password_hash, status
+      SELECT id, name, email, role, password_hash, status, active_until
       FROM users
       WHERE lower(btrim(email)) = ${key} OR lower(btrim(username)) = ${key}
       LIMIT 1
     `;
-    const user = rows[0];
+    let user = rows[0];
+    // Lazily deactivate accounts whose active period has ended.
+    if (user && user.status === "active" && user.active_until && new Date(user.active_until).getTime() <= Date.now()) {
+      await sql`UPDATE users SET status = 'deactivated', updated_at = now() WHERE id = ${user.id}`;
+      await sql`UPDATE sessions SET revoked_at = now() WHERE user_id = ${user.id} AND revoked_at IS NULL`;
+      user = { ...user, status: "deactivated" };
+    }
+
     // Same response whether the account exists, is deactivated or the password is wrong.
     if (!user || user.status !== "active" || !verifyPassword(password, user.password_hash)) {
-      return fail(c, 400, "INVALID_CREDENTIALS", "Invalid email or password.");
+      const failure = recordSigninFailure(key);
+      if (failure.blocked) {
+        return c.json(
+          { error: { code: "LOCKED", message: `Too many wrong passwords. Try again in ${failure.retryAfter} seconds.`, requestId: c.get("requestId"), retryAfter: failure.retryAfter } },
+          429,
+        );
+      }
+      return c.json(
+        { error: { code: "INVALID_CREDENTIALS", message: `Invalid email or password. ${failure.remaining} attempt${failure.remaining === 1 ? "" : "s"} left before a 1-minute lock.`, requestId: c.get("requestId"), attemptsLeft: failure.remaining } },
+        400,
+      );
     }
+    clearSigninFailures(key);
 
     const token = generateSessionToken();
     await sql`
@@ -110,7 +134,7 @@ authRoutes.post(
     if (!stored || !verifyPassword(currentPassword, stored)) {
       return fail(c, 400, "INVALID_CURRENT_PASSWORD", "Your current password is not correct.");
     }
-    await sql`UPDATE users SET password_hash = ${hashPassword(newPassword)} WHERE id = ${user.id}`;
+    await sql`UPDATE users SET password_hash = ${hashPassword(newPassword)}, password_changed_at = now(), updated_at = now() WHERE id = ${user.id}`;
     // Keep the current session, revoke all others.
     const token = getCookie(c, SESSION_COOKIE);
     if (token) {
@@ -170,7 +194,7 @@ authRoutes.post(
       });
       if (!res.ok) {
         console.error("resend_failed", res.status, await res.text());
-        return fail(c, 503, "EMAIL_UNAVAILABLE", "Could not send the reset email. Try again later.");
+        return fail(c, 503, "EMAIL_UNAVAILABLE", "We couldn't send the email. Try again, or ask the store owner to reset your password.");
       }
     }
 
@@ -190,6 +214,10 @@ authRoutes.post(
   ),
   async (c) => {
     const { token, password } = c.req.valid("json");
+    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    if (!rateLimit(`reset:${ip}`, 10, 15 * 60_000)) {
+      return fail(c, 429, "RATE_LIMITED", "Too many attempts. Try again later.");
+    }
     const rows = await sql<{ id: string; user_id: string; expires_at: Date; used_at: Date | null }[]>`
       SELECT id, user_id, expires_at, used_at FROM password_reset_tokens
       WHERE token_hash = ${hashToken(token)} LIMIT 1
@@ -202,7 +230,7 @@ authRoutes.post(
     }
 
     await sql.begin(async (tx) => {
-      await tx`UPDATE users SET password_hash = ${hashPassword(password)} WHERE id = ${record.user_id}`;
+      await tx`UPDATE users SET password_hash = ${hashPassword(password)}, password_changed_at = now(), updated_at = now() WHERE id = ${record.user_id}`;
       await tx`UPDATE password_reset_tokens SET used_at = now() WHERE id = ${record.id}`;
       await tx`UPDATE sessions SET revoked_at = now() WHERE user_id = ${record.user_id} AND revoked_at IS NULL`;
     });
