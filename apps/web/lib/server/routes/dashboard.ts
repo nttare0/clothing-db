@@ -39,8 +39,9 @@ dashboardRoutes.get("/", requireAuth, requirePermission("dashboard"), async (c) 
              )::text AS low_stock_count,
              COALESCE(SUM(COALESCE(b.quantity_on_hand,0) * COALESCE(b.moving_average_cost,0)), 0)::text AS inventory_value
       FROM product_variants v
+      JOIN products p ON p.id = v.product_id
       LEFT JOIN inventory_balances b ON b.variant_id = v.id
-      WHERE v.status = 'active'
+      WHERE v.status = 'active' AND p.status = 'active'
     `,
     sql<{ day: string; total: string }[]>`
       WITH days AS (
@@ -98,7 +99,7 @@ dashboardRoutes.get("/", requireAuth, requirePermission("dashboard"), async (c) 
       FROM product_variants v
       JOIN products p ON p.id = v.product_id
       LEFT JOIN inventory_balances b ON b.variant_id = v.id
-      WHERE v.status = 'active'
+      WHERE v.status = 'active' AND p.status = 'active'
         AND (COALESCE(b.quantity_on_hand,0) - COALESCE(b.quantity_reserved,0)
              - COALESCE(b.quantity_damaged,0) - COALESCE(b.quantity_quarantined,0)) <= v.reorder_level
       ORDER BY sellable ASC, p.name
