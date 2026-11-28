@@ -12,6 +12,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ErrorAlert } from "@/components/state";
 import { RoleGate } from "@/components/role-gate";
+import { PhoneInput } from "@/components/phone-input";
+import { ResetCard } from "@/components/reset-card";
+import { normalizePhone } from "@/lib/phone";
 
 type Settings = {
   store_name?: string;
@@ -64,6 +67,11 @@ export default function SettingsPage() {
       toast.error("Keep at least one payment method enabled.");
       return;
     }
+    const phoneCheck = form.store_phone?.trim() ? normalizePhone(form.store_phone) : null;
+    if (phoneCheck && !phoneCheck.ok) {
+      toast.error(phoneCheck.message ?? "Enter a valid phone number.");
+      return;
+    }
     setPending(true);
     try {
       await api("/settings", {
@@ -71,7 +79,7 @@ export default function SettingsPage() {
         body: {
           store_name: form.store_name?.trim() || undefined,
           store_address: form.store_address?.trim() || undefined,
-          store_phone: form.store_phone?.trim() || undefined,
+          store_phone: phoneCheck?.value || undefined,
           receipt_footer: form.receipt_footer?.trim() || undefined,
           low_stock_default: form.low_stock_default,
           allowed_payment_methods: form.allowed_payment_methods,
@@ -116,7 +124,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="store-phone">Phone</Label>
-                  <Input id="store-phone" inputMode="tel" value={form.store_phone ?? ""} onChange={(e) => setForm({ ...form, store_phone: e.target.value })} placeholder="+250 788 000 000" />
+                  <PhoneInput id="store-phone" value={form.store_phone ?? ""} onValueChange={(v) => setForm({ ...form, store_phone: v })} />
                 </div>
               </CardContent>
             </Card>
@@ -140,7 +148,7 @@ export default function SettingsPage() {
               <CardContent className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5 sm:max-w-48">
                   <Label htmlFor="low-stock">Default low-stock threshold</Label>
-                  <Input id="low-stock" type="number" inputMode="numeric" min={0} value={form.low_stock_default ?? 5} onChange={(e) => setForm({ ...form, low_stock_default: Math.max(0, Number(e.target.value) || 0) })} />
+                  <Input id="low-stock" type="number" inputMode="numeric" min={0} value={form.low_stock_default ?? 5} onChange={(e) => setForm({ ...form, low_stock_default: Math.max(0, Number(e.target.value.replace(/[^\d]/g, "")) || 0) })} />
                   <p className="text-[11px] text-muted-foreground">Used when a variant has no per-variant reorder level.</p>
                 </div>
                 <fieldset className="flex flex-col gap-2">
@@ -177,6 +185,8 @@ export default function SettingsPage() {
             </div>
           </form>
         )}
+
+        <ResetCard />
       </div>
     </RoleGate>
   );

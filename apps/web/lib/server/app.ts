@@ -15,6 +15,9 @@ import { customerRoutes, supplierRoutes } from "./routes/people";
 import { expenseRoutes } from "./routes/expenses";
 import { reportRoutes } from "./routes/reports";
 import { auditRoutes, settingsRoutes, staffRoutes } from "./routes/admin";
+import { impersonationRoutes } from "./routes/impersonation";
+import { resetRoutes } from "./routes/reset";
+import { exportRoutes } from "./routes/export";
 
 export function createApp() {
   const app = new Hono().basePath("/api");
@@ -71,7 +74,10 @@ export function createApp() {
   app.route("/customers", customerRoutes);
   app.route("/expenses", expenseRoutes);
   app.route("/reports", reportRoutes);
+  app.route("/staff/impersonation", impersonationRoutes);
   app.route("/staff", staffRoutes);
+  app.route("/reset", resetRoutes);
+  app.route("/export", exportRoutes);
   app.route("/audit-logs", auditRoutes);
   app.route("/settings", settingsRoutes);
 

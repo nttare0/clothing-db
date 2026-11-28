@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import { getDemoState } from "@/lib/server/demo";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PwaRegister } from "@/components/pwa-register";
 
 // Every route renders on demand: the demo flag must be fresh per request
 // and never baked into statically prerendered HTML.
@@ -43,6 +44,11 @@ export const metadata: Metadata = {
     images: ["/og-image.jpg"],
   },
   robots: { index: false, follow: false },
+  appleWebApp: {
+    capable: true,
+    title: "ClothFlow",
+    statusBarStyle: "default",
+  },
 };
 
 export const viewport: Viewport = {
@@ -66,6 +72,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="flex min-h-full flex-col bg-background font-sans text-foreground">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange nonce={nonce}>
+          <PwaRegister />
           {demoActive ? (
             <script nonce={nonce} dangerouslySetInnerHTML={{ __html: "window.__CLOTHFLOW_DEMO__=true" }} />
           ) : null}

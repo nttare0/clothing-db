@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-6 py-12 text-center">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-6 py-12 text-center">
       <Image
         src="/illustrations/not-found.png"
         alt="An empty clothing rack with a single hanger and price tag"

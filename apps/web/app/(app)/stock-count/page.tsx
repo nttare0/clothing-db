@@ -162,7 +162,7 @@ export default function StockCountPage() {
 
         {variants ? (
           <Card className="p-0">
-            <CardHeader className="flex-row items-center justify-between gap-3 space-y-0 p-4 pb-2">
+            <CardHeader className="flex-col items-start gap-3 space-y-0 p-4 pb-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <CardTitle>Count sheet</CardTitle>
                 <CardDescription>{variants.length} variant{variants.length === 1 ? "" : "s"} · {countedLines.length} counted · {varianceLines.length} variance{varianceLines.length === 1 ? "" : "s"}</CardDescription>
@@ -206,7 +206,7 @@ export default function StockCountPage() {
                               className="ml-auto h-9 w-20 text-right"
                               placeholder="0"
                               value={raw ?? ""}
-                              onChange={(e) => { setCounts((c0) => ({ ...c0, [v.variantId]: e.target.value })); setConfirming(false); }}
+                              onChange={(e) => { setCounts((c0) => ({ ...c0, [v.variantId]: e.target.value.replace(/[^\d]/g, "") })); setConfirming(false); }}
                             />
                           </TableCell>
                           <TableCell className={`text-right font-semibold tabular-nums ${variance === null ? "text-muted-foreground" : variance === 0 ? "text-muted-foreground" : variance < 0 ? "text-destructive" : "text-emerald-600"}`}>

@@ -110,6 +110,8 @@ export function ProductForm({
         errors[`variant-${i}`] = "Price must be a number.";
       else if (v.sellingPrice !== "" && Number(v.sellingPrice) < 0)
         errors[`variant-${i}`] = "Price cannot be negative.";
+      if (v.reorderLevel !== "" && (!Number.isInteger(Number(v.reorderLevel)) || Number(v.reorderLevel) < 0))
+        errors[`variant-${i}`] = "Reorder level must be zero or a positive whole number.";
     });
     if (duplicateSku) errors.variants = `Duplicate SKU "${duplicateSku}". Each variant needs its own SKU.`;
     setFieldErrors(errors);
@@ -255,11 +257,11 @@ export function ProductForm({
                 </div>
                 <div className="flex flex-col gap-1.5 sm:col-span-2">
                   <Label htmlFor={`price-${i}`}>Price (RWF)</Label>
-                  <Input id={`price-${i}`} inputMode="numeric" value={v.sellingPrice} onChange={(e) => updateVariant(i, { sellingPrice: e.target.value })} placeholder="15000" />
+                  <Input id={`price-${i}`} inputMode="numeric" value={v.sellingPrice} onChange={(e) => updateVariant(i, { sellingPrice: e.target.value.replace(/[^\d.]/g, "") })} placeholder="15000" />
                 </div>
                 <div className="flex flex-col gap-1.5 sm:col-span-1">
                   <Label htmlFor={`reorder-${i}`}>Reorder</Label>
-                  <Input id={`reorder-${i}`} inputMode="numeric" placeholder="0" value={v.reorderLevel} onChange={(e) => updateVariant(i, { reorderLevel: e.target.value })} />
+                  <Input id={`reorder-${i}`} inputMode="numeric" placeholder="0" value={v.reorderLevel} onChange={(e) => updateVariant(i, { reorderLevel: e.target.value.replace(/[^\d]/g, "") })} />
                 </div>
                 <div className="col-span-2 flex items-center justify-between gap-2 sm:col-span-12">
                   {fieldErrors[`variant-${i}`] ? (

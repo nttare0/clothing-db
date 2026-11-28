@@ -114,7 +114,7 @@ export default function DashboardPage() {
       {/* KPI cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         {kpis.map((kpi) => (
-          <Card key={kpi.label} className="gap-2">
+          <Card key={kpi.label} className="min-w-0 gap-2">
             <CardContent className="flex flex-col gap-1 pt-1">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-xs font-medium text-muted-foreground">{kpi.label}</p>

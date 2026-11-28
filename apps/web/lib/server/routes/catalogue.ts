@@ -4,7 +4,7 @@ import { sql } from "../db";
 import { audit, fail, ok, requireAuth, requirePermission } from "../http";
 import { roleCan } from "../permissions";
 import { zValidator } from "@hono/zod-validator";
-import { hook } from "../validate";
+import { hook, uuidLike } from "../validate";
 
 // ---------- Categories ----------
 export const categoryRoutes = new Hono();
@@ -113,18 +113,18 @@ export function isUuid(value: string): boolean {
 export const productRoutes = new Hono();
 
 const variantInput = z.object({
-  id: z.string().uuid().optional(),
+  id: uuidLike.optional(),
   size: z.string().trim().min(1, "Size is required.").max(20),
   colour: z.string().trim().max(60).nullable().optional(),
   sku: z.string().trim().min(1, "SKU is required.").max(60),
   barcode: z.string().trim().max(60).nullable().optional(),
   sellingPrice: z.number().finite().min(0, "Price cannot be negative.").nullable().optional(),
-  reorderLevel: z.number().int().min(0).max(1_000_000).default(0),
+  reorderLevel: z.number().int().min(0, "Reorder level cannot be negative.").max(1_000_000).default(0),
 });
 
 const productBody = z.object({
   name: z.string().trim().min(1, "Product name is required.").max(160),
-  categoryId: z.string().uuid().nullable().optional(),
+  categoryId: uuidLike.nullable().optional(),
   brand: z.string().trim().max(80).nullable().optional(),
   description: z.string().trim().max(2000).nullable().optional(),
   variants: z.array(variantInput).min(1, "Add at least one variant.").max(100),
@@ -470,3 +470,19 @@ function mapConstraintError(err: unknown): { status: number; code: string; messa
 export function variantLabel(size: string, colour: string | null): string {
   return colour ? `${size} / ${colour}` : size;
 }
+
+categoryRoutes.delete("/:id", requireAuth, requirePermission("categories.manage"), async (c) => {
+  const id = c.req.param("id");
+  if (!isUuid(id)) return fail(c, 400, "VALIDATION", "We couldn't tell which category that is.");
+  const user = c.get("user");
+  const before = await sql<{ id: string; name: string }[]>`SELECT id, name FROM categories WHERE id = ${id} LIMIT 1`;
+  const target = before[0];
+  if (!target) return fail(c, 404, "NOT_FOUND", "Category not found.");
+  // Products in this category become Uncategorised (FK ON DELETE SET NULL).
+  await sql`DELETE FROM categories WHERE id = ${id}`;
+  await audit(user.id, "category.delete", "category", id, {
+    before: { name: target.name },
+    requestId: c.get("requestId"),
+  });
+  return ok(c, { id });
+});

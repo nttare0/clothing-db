@@ -25,6 +25,8 @@ import {
   XIcon,
   BellIcon,
   WifiOffIcon,
+  DownloadIcon,
+  Undo2Icon as SwitchBackIcon,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -82,12 +84,13 @@ const NAV: { group: string; items: NavItem[] }[] = [
       { label: "Staff & Permissions", href: "/staff", icon: ShieldCheckIcon, permission: "staff.manage" },
       { label: "Audit Logs", href: "/audit-logs", icon: ScrollTextIcon, permission: "audit.view" },
       { label: "Settings", href: "/settings", icon: SettingsIcon, permission: "settings.manage" },
+      { label: "Export Data", href: "/export", icon: DownloadIcon, permission: "settings.manage" },
       { label: "Help", href: "/help", icon: CircleHelpIcon },
     ],
   },
 ];
 
-type Me = { name: string | null; email: string; role: string | null };
+type Me = { name: string | null; email: string; role: string | null; impersonation?: { byName: string | null } | null };
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -103,6 +106,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setLastPathname(pathname);
     setOpen(false);
   }
+
+  // End the session after 15 minutes of no use (server enforces this too).
+  useEffect(() => {
+    const IDLE_LIMIT_MS = 15 * 60 * 1000;
+    let timer: number | undefined;
+    const schedule = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        api("/auth/signout", { method: "POST" })
+          .catch(() => undefined)
+          .finally(() => {
+            // Full navigation is deliberate after a server-side session kill.
+            // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+            window.location.assign("/session-expired");
+          });
+      }, IDLE_LIMIT_MS);
+    };
+    const events = ["pointerdown", "keydown", "wheel", "touchstart"] as const;
+    schedule();
+    for (const event of events) window.addEventListener(event, schedule, { passive: true });
+    return () => {
+      window.clearTimeout(timer);
+      for (const event of events) window.removeEventListener(event, schedule);
+    };
+  }, []);
 
   useEffect(() => {
     api<Me>("/auth/me")
@@ -160,7 +188,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 const content = (
                   <>
                     <Icon className="size-[18px] shrink-0 text-current" aria-hidden />
-                    <span className="truncate">{item.label}</span>
+                    <span className="min-w-0 truncate">{item.label}</span>
                   </>
                 );
                 return (
@@ -184,15 +212,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <div className="mt-auto px-2 text-[11px] text-muted-foreground">
-        RWF · Store currency
-        <br />
         ClothFlow 1.0
       </div>
     </nav>
   );
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-dvh">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-primary-foreground"
@@ -202,7 +228,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Desktop sidebar */}
       <aside className="hidden w-64 shrink-0 border-r border-border bg-card print:hidden lg:block">
-        <div className="sticky top-0 h-screen">{nav}</div>
+        <div className="sticky top-0 h-dvh">{nav}</div>
       </aside>
 
       {/* Mobile drawer */}
@@ -265,6 +291,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
         </header>
+
+        {me?.impersonation ? (
+          <div role="status" className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-300 bg-amber-100 px-4 py-2 text-xs font-medium text-amber-950 print:hidden">
+            <span>
+              You are signed in as <strong>{me.name ?? me.email}</strong>. Changes you make count against this account.
+            </span>
+            <button
+              type="button"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-400 bg-amber-200 px-2.5 py-1 font-semibold hover:bg-amber-300"
+              onClick={() => {
+                api("/staff/impersonation/stop", { method: "POST" })
+                  .catch(() => undefined)
+                  .finally(() => {
+                    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+                    window.location.assign("/dashboard");
+                  });
+              }}
+            >
+              <SwitchBackIcon className="size-3.5" aria-hidden /> Switch back
+            </button>
+          </div>
+        ) : null}
 
         {!online ? (
           <div role="status" className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-900 print:hidden">

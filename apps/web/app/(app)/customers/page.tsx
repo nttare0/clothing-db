@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { UsersIcon, PlusIcon, PencilIcon, HistoryIcon } from "lucide-react";
+import { PlusIcon, PencilIcon, HistoryIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError, formatRWF, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/dialog";
 import { ErrorAlert, EmptyState } from "@/components/state";
 import { SearchInput } from "@/components/search-input";
+import { PhoneInput } from "@/components/phone-input";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { normalizePhone } from "@/lib/phone";
 
 type Customer = {
   id: string;
@@ -63,6 +66,24 @@ export default function CustomersPage() {
   const [historyFor, setHistoryFor] = useState<Customer | null>(null);
   const [history, setHistory] = useState<SaleRow[] | null>(null);
 
+  const [deleteFor, setDeleteFor] = useState<Customer | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+
+  async function confirmDelete() {
+    if (!deleteFor) return;
+    setDeletePending(true);
+    try {
+      await api(`/customers/${deleteFor.id}`, { method: "DELETE" });
+      toast.success("Customer deleted");
+      setDeleteFor(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "We couldn't delete the customer. Please try again.");
+    } finally {
+      setDeletePending(false);
+    }
+  }
+
   const load = useCallback(() => {
     setLoading(true);
     setError(null);
@@ -97,11 +118,12 @@ export default function CustomersPage() {
 
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const phone = form.phone.replace(/\s+/g, "").trim();
-    if (!/^(?:\+?250|0)?7[2389]\d{7}$/.test(phone)) {
-      setFormError("Enter a valid Rwandan phone number (e.g. +250 788 123 456).");
+    const phoneCheck = normalizePhone(form.phone);
+    if (!phoneCheck.ok) {
+      setFormError(phoneCheck.message ?? "Enter a valid phone number.");
       return;
     }
+    const phone = phoneCheck.value;
     setPending(true);
     setFormError(null);
     try {
@@ -192,6 +214,7 @@ export default function CustomersPage() {
                     <div className="inline-flex items-center gap-1">
                       <Button variant="ghost" size="icon-sm" aria-label="Purchase history" title="Purchase history" onClick={() => openHistory(c)}><HistoryIcon /></Button>
                       <Button variant="ghost" size="icon-sm" aria-label="Edit customer" onClick={() => openEdit(c)}><PencilIcon /></Button>
+                      <Button variant="ghost" size="icon-sm" aria-label="Delete customer" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteFor(c)}><Trash2Icon /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -214,7 +237,7 @@ export default function CustomersPage() {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cust-phone">Phone <span className="text-destructive">*</span></Label>
-              <Input id="cust-phone" inputMode="tel" required value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+250 788 000 000" />
+              <PhoneInput id="cust-phone" required value={form.phone} onValueChange={(v) => setForm((f) => ({ ...f, phone: v }))} />
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="cust-email">Email</Label>
@@ -265,6 +288,15 @@ export default function CustomersPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteFor !== null}
+        onOpenChange={(open) => { if (!open) setDeleteFor(null); }}
+        title="Delete customer?"
+        description={deleteFor ? `${deleteFor.name ?? deleteFor.phone} will be removed permanently. Past sales keep their phone number and totals — only the customer record is deleted.` : ""}
+        pending={deletePending}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

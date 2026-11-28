@@ -4,6 +4,7 @@ import { sql } from "../db";
 import { audit, fail, ok, requireAuth, requirePermission } from "../http";
 import { zValidator } from "@hono/zod-validator";
 import { hook } from "../validate";
+import { normalizePhone } from "../../phone";
 
 // ---------- Suppliers ----------
 export const supplierRoutes = new Hono();
@@ -58,9 +59,15 @@ supplierRoutes.post(
   async (c) => {
     const body = c.req.valid("json");
     const user = c.get("user");
+    let phone: string | null = null;
+    if (body.phone && body.phone.trim()) {
+      const check = normalizePhone(body.phone);
+      if (!check.ok) return fail(c, 400, "INVALID_PHONE", check.message ?? "Enter a valid phone number.");
+      phone = check.value;
+    }
     const rows = await sql<{ id: string; name: string }[]>`
       INSERT INTO suppliers (name, contact_person, phone, email, address, notes)
-      VALUES (${body.name.trim()}, ${body.contactPerson?.trim() || null}, ${body.phone?.trim() || null},
+      VALUES (${body.name.trim()}, ${body.contactPerson?.trim() || null}, ${phone},
               ${body.email?.trim() || null}, ${body.address?.trim() || null}, ${body.notes?.trim() || null})
       RETURNING id, name
     `;
@@ -87,7 +94,16 @@ supplierRoutes.patch(
 
     const name = body.name !== undefined ? body.name.trim() : cur.name;
     const contactPerson = body.contactPerson !== undefined ? body.contactPerson?.trim() || null : cur.contact_person;
-    const phone = body.phone !== undefined ? body.phone?.trim() || null : cur.phone;
+    let phone = cur.phone;
+    if (body.phone !== undefined) {
+      if (body.phone && body.phone.trim()) {
+        const check = normalizePhone(body.phone);
+        if (!check.ok) return fail(c, 400, "INVALID_PHONE", check.message ?? "Enter a valid phone number.");
+        phone = check.value;
+      } else {
+        phone = null;
+      }
+    }
     const email = body.email !== undefined ? body.email?.trim() || null : cur.email;
     const address = body.address !== undefined ? body.address?.trim() || null : cur.address;
     const notes = body.notes !== undefined ? body.notes?.trim() || null : cur.notes;
@@ -144,7 +160,9 @@ customerRoutes.get("/", requireAuth, requirePermission("customers.manage"), asyn
     FROM customers cu
     WHERE (${includeArchived} OR cu.status = 'active')
       AND (${search === "" ? null : like}::text IS NULL
-           OR lower(COALESCE(cu.name, '')) LIKE ${like} OR lower(COALESCE(cu.phone, '')) LIKE ${like})
+           OR lower(COALESCE(cu.name, '')) LIKE ${like}
+           OR lower(COALESCE(cu.phone, '')) LIKE ${like}
+           OR lower(COALESCE(cu.email, '')) LIKE ${like})
     ORDER BY cu.status, lower(COALESCE(cu.name, cu.phone, ''))
   `;
   return ok(c, {
@@ -169,8 +187,16 @@ customerRoutes.post(
   async (c) => {
     const body = c.req.valid("json");
     const user = c.get("user");
-    const phone = body.phone.trim();
-    const dup = await sql<{ id: string }[]>`SELECT id FROM customers WHERE phone = ${phone} AND status = 'active' LIMIT 1`;
+    const phoneCheck = normalizePhone(body.phone);
+    if (!phoneCheck.ok) return fail(c, 400, "INVALID_PHONE", phoneCheck.message ?? "Enter a valid phone number.");
+    const phone = phoneCheck.value;
+    const last9 = phone.replace(/\D/g, "").slice(-9);
+    const dup = await sql<{ id: string }[]>`
+      SELECT id FROM customers
+      WHERE status = 'active'
+        AND (phone = ${phone} OR right(regexp_replace(phone, '[^0-9]', '', 'g'), 9) = ${last9})
+      LIMIT 1
+    `;
     if (dup.length > 0) return fail(c, 409, "DUPLICATE_PHONE", "An active customer with this phone already exists.");
     const rows = await sql<{ id: string }[]>`
       INSERT INTO customers (name, phone, email, notes)
@@ -197,8 +223,13 @@ customerRoutes.patch(
     const cur = existing[0];
     if (!cur) return fail(c, 404, "NOT_FOUND", "Customer not found.");
 
-    const name = body.name !== undefined ? body.name.trim() : cur.name;
-    const phone = body.phone !== undefined ? body.phone.trim() : cur.phone;
+    const name = body.name !== undefined ? (body.name.trim() || null) : cur.name;
+    let phone = cur.phone;
+    if (body.phone !== undefined) {
+      const phoneCheck = normalizePhone(body.phone);
+      if (!phoneCheck.ok) return fail(c, 400, "INVALID_PHONE", phoneCheck.message ?? "Enter a valid phone number.");
+      phone = phoneCheck.value;
+    }
     const email = body.email !== undefined ? body.email?.trim() || null : cur.email;
     const notes = body.notes !== undefined ? body.notes?.trim() || null : cur.notes;
     const status = body.status ?? cur.status;
@@ -223,3 +254,50 @@ customerRoutes.get("/:id/sales", requireAuth, requirePermission("customers.manag
     items: rows.map((r) => ({ id: r.id, receiptNumber: r.receipt_number, completedAt: r.completed_at, total: Number(r.total) })),
   });
 });
+
+
+// ---------- Deletes (owner/manager level via each area's permission) ----------
+
+customerRoutes.delete("/:id", requireAuth, requirePermission("customers.manage"), async (c) => {
+  const id = c.req.param("id");
+  if (!isUuidParam(id)) return fail(c, 400, "VALIDATION", "We couldn't tell which customer that is.");
+  const user = c.get("user");
+  const existing = await sql<{ id: string; name: string | null; phone: string }[]>`
+    SELECT id, name, phone FROM customers WHERE id = ${id} LIMIT 1
+  `;
+  const target = existing[0];
+  if (!target) return fail(c, 404, "NOT_FOUND", "Customer not found.");
+  await sql`DELETE FROM customers WHERE id = ${id}`;
+  await audit(user.id, "customer.delete", "customer", id, {
+    before: { name: target.name, phone: target.phone },
+    requestId: c.get("requestId"),
+  });
+  return ok(c, { id });
+});
+
+supplierRoutes.delete("/:id", requireAuth, requirePermission("suppliers.manage"), async (c) => {
+  const id = c.req.param("id");
+  if (!isUuidParam(id)) return fail(c, 400, "VALIDATION", "We couldn't tell which supplier that is.");
+  const user = c.get("user");
+  const existing = await sql<{ id: string; name: string }[]>`
+    SELECT id, name FROM suppliers WHERE id = ${id} LIMIT 1
+  `;
+  const target = existing[0];
+  if (!target) return fail(c, 404, "NOT_FOUND", "Supplier not found.");
+  const refs = await sql<{ count: string }[]>`SELECT COUNT(*)::text AS count FROM purchases WHERE supplier_id = ${id}`;
+  const count = Number(refs[0]?.count ?? 0);
+  if (count > 0) {
+    return fail(c, 409, "HAS_PURCHASES", `This supplier has ${count} purchase record${count === 1 ? "" : "s"} — archive it instead of deleting, so purchase history keeps its supplier.`);
+  }
+  await sql`DELETE FROM suppliers WHERE id = ${id}`;
+  await audit(user.id, "supplier.delete", "supplier", id, {
+    before: { name: target.name },
+    requestId: c.get("requestId"),
+  });
+  return ok(c, { id });
+});
+
+const UUID_PARAM = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuidParam(v: string): boolean {
+  return UUID_PARAM.test(v);
+}

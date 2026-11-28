@@ -149,6 +149,12 @@ html, body {
   overflow-x: clip;
 }
 
+/* Always reserve the vertical scrollbar gutter so the layout never shifts
+   (visible as a blink) when a page crosses the viewport-height threshold. */
+html {
+  scrollbar-gutter: stable;
+}
+
 main :where(.tabular-nums) {
   font-variant-numeric: tabular-nums;
 }

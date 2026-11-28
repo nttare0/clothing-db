@@ -3,7 +3,7 @@ import { z } from "zod";
 import { sql } from "../db";
 import { audit, fail, ok, requireAuth, requirePermission } from "../http";
 import { zValidator } from "@hono/zod-validator";
-import { hook } from "../validate";
+import { hook, uuidLike } from "../validate";
 import { maybeLowStockAlert } from "./stock";
 
 export const salesRoutes = new Hono();
@@ -14,7 +14,7 @@ const saleBody = z.object({
   items: z
     .array(
       z.object({
-        variantId: z.string().uuid(),
+        variantId: uuidLike,
         quantity: z.number().int().positive("Quantity must be a positive integer.").max(10_000),
       }),
     )

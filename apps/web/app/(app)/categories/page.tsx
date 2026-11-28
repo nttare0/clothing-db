@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PlusIcon, PencilIcon, ArchiveIcon, TagsIcon } from "lucide-react";
+import { PlusIcon, PencilIcon, ArchiveIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -25,9 +25,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { ErrorAlert, EmptyState } from "@/components/state";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type Category = {
   id: string;
@@ -46,6 +46,23 @@ export default function CategoriesPage() {
   const [description, setDescription] = useState("");
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deleteFor, setDeleteFor] = useState<Category | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+
+  async function confirmDelete() {
+    if (!deleteFor) return;
+    setDeletePending(true);
+    try {
+      await api(`/categories/${deleteFor.id}`, { method: "DELETE" });
+      toast.success("Category deleted");
+      setDeleteFor(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "We couldn't delete the category. Please try again.");
+    } finally {
+      setDeletePending(false);
+    }
+  }
 
   const load = useCallback(() => {
     setError(null);
@@ -172,6 +189,9 @@ export default function CategoriesPage() {
                           <ArchiveIcon />
                         </Button>
                       ) : null}
+                      <Button variant="ghost" size="icon-sm" onClick={() => setDeleteFor(cat)} aria-label={`Delete ${cat.name}`} className="text-destructive hover:bg-destructive/10 hover:text-destructive">
+                        <Trash2Icon />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -204,6 +224,15 @@ export default function CategoriesPage() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteFor !== null}
+        onOpenChange={(open) => { if (!open) setDeleteFor(null); }}
+        title="Delete category?"
+        description={deleteFor ? `${deleteFor.name} will be removed permanently. Products in this category become Uncategorised — nothing else changes.` : ""}
+        pending={deletePending}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

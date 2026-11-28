@@ -101,7 +101,7 @@ export default function SaleDetailPage() {
 
   return (
     <div className="receipt-page mx-auto flex w-full max-w-2xl flex-col gap-4 p-4 pt-6 sm:p-6">
-      <div className="flex items-center justify-between gap-3 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Link href="/sales" className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
           <ArrowLeftIcon className="size-4" aria-hidden /> Sales
         </Link>
