@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  ShirtIcon,
   ShoppingCartIcon,
   PackagePlusIcon,
-  ShirtIcon,
   ArrowLeftRightIcon,
   PrinterIcon,
   WifiOffIcon,
@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export const metadata: Metadata = { title: "Help" };
+export const metadata: Metadata = {
+  title: "Help",
+  description:
+    "Short answers for everyday ClothFlow tasks: ringing up sales, receiving stock, adding products, reading the stock ledger, printing receipts, working offline and managing your account.",
+  robots: { index: true, follow: true },
+};
 
 const TOPICS = [
   {
@@ -86,7 +91,15 @@ const TOPICS = [
 
 export default function HelpPage() {
   return (
+    <main className="min-h-dvh bg-background">
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-4 sm:p-6">
+      <header className="flex items-center justify-between border-b pb-4">
+        <Link href="/signin" className="flex items-center gap-2 font-semibold tracking-tight">
+          <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"><ShirtIcon className="size-4" aria-hidden /></span>
+          ClothFlow
+        </Link>
+        <Link href="/signin" className="text-sm font-medium text-primary underline-offset-4 hover:underline">Sign in</Link>
+      </header>
       <div className="flex items-center gap-3">
         <span className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
           <CircleHelpIcon className="size-6" aria-hidden />
@@ -127,7 +140,7 @@ export default function HelpPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            ClothFlow 1.0 · Single store · RWF. Screens marked with a stage label (Returns, Adjustments, Stock Count, Reports…) arrive in later build stages.
+            ClothFlow · Single store · RWF. This page is the public help for ClothFlow staff and contains no store data.
           </p>
           <p className="mt-2 text-sm">
             <Link href="/dashboard" className="font-medium text-primary hover:underline">Back to the dashboard</Link>
@@ -135,5 +148,6 @@ export default function HelpPage() {
         </CardContent>
       </Card>
     </div>
+    </main>
   );
 }
