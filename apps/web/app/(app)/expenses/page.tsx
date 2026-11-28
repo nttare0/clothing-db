@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { PlusIcon, PencilIcon, WalletIcon, CalendarDaysIcon } from "lucide-react";
+import { PlusIcon, PencilIcon, Trash2Icon, WalletIcon, CalendarDaysIcon } from "lucide-react";
 import { toast } from "sonner";
-import { api, ApiError, formatRWF, formatDateTime } from "@/lib/api";
+import { api, ApiError, formatRWF } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import {
   Table,
@@ -30,6 +30,7 @@ import {
 import { ErrorAlert, EmptyState } from "@/components/state";
 import { RoleGate } from "@/components/role-gate";
 import { SearchInput } from "@/components/search-input";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 const CATEGORIES = [
   "Rent",
@@ -96,6 +97,23 @@ export default function ExpensesPage() {
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [deleteFor, setDeleteFor] = useState<Expense | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+
+  async function confirmDelete() {
+    if (!deleteFor) return;
+    setDeletePending(true);
+    try {
+      await api(`/expenses/${deleteFor.id}`, { method: "DELETE" });
+      toast.success("Expense deleted");
+      setDeleteFor(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "We couldn't delete the expense. Please try again.");
+    } finally {
+      setDeletePending(false);
+    }
+  }
 
   const load = useCallback(() => {
     setLoading(true);
@@ -255,6 +273,7 @@ export default function ExpensesPage() {
                     <TableCell className="text-right font-semibold tabular-nums">{formatRWF(e.amount)}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon-sm" aria-label="Edit expense" onClick={() => openEdit(e)}><PencilIcon /></Button>
+                      <Button variant="ghost" size="icon-sm" aria-label="Delete expense" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteFor(e)}><Trash2Icon /></Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -293,7 +312,7 @@ export default function ExpensesPage() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="exp-amount">Amount (RWF) <span className="text-destructive">*</span></Label>
-                  <Input id="exp-amount" type="number" inputMode="numeric" min={1} step="1" placeholder="e.g. 25000" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} required autoFocus />
+                  <Input id="exp-amount" type="number" inputMode="numeric" min={1} step="1" placeholder="e.g. 25000" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value.replace(/[^\d.]/g, "") }))} required autoFocus />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="exp-method">Payment method</Label>
@@ -318,6 +337,14 @@ export default function ExpensesPage() {
             </form>
           </DialogContent>
         </Dialog>
+      <ConfirmDialog
+        open={deleteFor !== null}
+        onOpenChange={(open) => { if (!open) setDeleteFor(null); }}
+        title="Delete expense?"
+        description={deleteFor ? `The ${deleteFor.category} expense will be removed permanently.` : ""}
+        pending={deletePending}
+        onConfirm={confirmDelete}
+      />
       </div>
     </RoleGate>
   );

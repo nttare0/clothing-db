@@ -211,7 +211,7 @@ function ReturnForm() {
                           aria-label={`Return quantity for ${item.sku}`}
                           className="ml-auto h-9 w-20 text-right"
                           value={qty[item.saleItemId] ?? "0"}
-                          onChange={(e) => setQty((q) => ({ ...q, [item.saleItemId]: e.target.value }))}
+                          onChange={(e) => setQty((q) => ({ ...q, [item.saleItemId]: e.target.value.replace(/[^\d]/g, "") }))}
                         />
                       </TableCell>
                       <TableCell>

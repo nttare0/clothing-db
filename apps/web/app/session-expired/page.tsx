@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Session expired" };
 
 export default function SessionExpiredPage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4 py-10">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background px-4 py-10">
       <Card className="w-full max-w-sm text-center">
         <CardHeader className="items-center">
           <span className="flex size-12 items-center justify-center rounded-xl bg-amber-100 text-amber-700">

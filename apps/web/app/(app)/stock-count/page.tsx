@@ -206,7 +206,7 @@ export default function StockCountPage() {
                               className="ml-auto h-9 w-20 text-right"
                               placeholder="0"
                               value={raw ?? ""}
-                              onChange={(e) => { setCounts((c0) => ({ ...c0, [v.variantId]: e.target.value })); setConfirming(false); }}
+                              onChange={(e) => { setCounts((c0) => ({ ...c0, [v.variantId]: e.target.value.replace(/[^\d]/g, "") })); setConfirming(false); }}
                             />
                           </TableCell>
                           <TableCell className={`text-right font-semibold tabular-nums ${variance === null ? "text-muted-foreground" : variance === 0 ? "text-muted-foreground" : variance < 0 ? "text-destructive" : "text-emerald-600"}`}>

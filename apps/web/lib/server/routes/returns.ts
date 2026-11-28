@@ -3,7 +3,7 @@ import { z } from "zod";
 import { sql } from "../db";
 import { audit, fail, ok, requireAuth, requirePermission } from "../http";
 import { zValidator } from "@hono/zod-validator";
-import { hook } from "../validate";
+import { hook, uuidLike } from "../validate";
 
 export const returnsRoutes = new Hono();
 
@@ -66,14 +66,14 @@ returnsRoutes.get("/eligibility", requireAuth, requirePermission("returns.proces
 });
 
 const returnBody = z.object({
-  saleId: z.string().uuid(),
+  saleId: uuidLike,
   reason: z.string().trim().min(1, "Reason is required.").max(80).default("customer_return"),
   note: z.string().trim().max(500).nullable().optional(),
   refundMethod: z.enum(["cash", "mobile_money", "card", "bank_transfer", "store_credit"]).nullable().optional(),
   items: z
     .array(
       z.object({
-        saleItemId: z.string().uuid(),
+        saleItemId: uuidLike,
         quantity: z.number().int().positive("Quantity must be at least 1.").max(10_000),
         disposition: z.enum(["resellable", "damaged", "quarantine"]).default("resellable"),
       }),

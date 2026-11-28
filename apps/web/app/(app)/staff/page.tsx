@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ShieldCheckIcon, PlusIcon, KeyRoundIcon, UserXIcon, UserCheckIcon, CopyIcon, Trash2Icon, CalendarClockIcon } from "lucide-react";
+import { ShieldCheckIcon, PlusIcon, KeyRoundIcon, UserXIcon, UserCheckIcon, CopyIcon, Trash2Icon, CalendarClockIcon, LogInIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -29,11 +29,15 @@ import {
 } from "@/components/ui/dialog";
 import { ErrorAlert } from "@/components/state";
 import { RoleGate } from "@/components/role-gate";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type StaffMember = {
   id: string;
   name: string;
   email: string;
+  username: string | null;
+  online: boolean;
+  lastSeenAt: string | null;
   role: string;
   status: string;
   lastSignInAt: string | null;
@@ -62,10 +66,20 @@ export default function StaffPage() {
   const [loading, setLoading] = useState(true);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", email: "", role: "cashier" });
+  const [form, setForm] = useState({ name: "", email: "", role: "cashier", username: "" });
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Temporary password is shown once — in this dedicated dialog, never silently swallowed.
   const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [tempUsername, setTempUsername] = useState<string | null>(null);
+  const [tempForName, setTempForName] = useState<string | null>(null);
+  const [switchFor, setSwitchFor] = useState<StaffMember | null>(null);
+  const [switchPending, setSwitchPending] = useState(false);
+  const [meId, setMeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    api<{ id: string }>("/auth/me").then((r) => setMeId(r.id)).catch(() => setMeId(null));
+  }, []);
 
   const [confirm, setConfirm] = useState<{ user: StaffMember; action: "deactivate" | "activate" | "reset" | "delete" } | null>(null);
   const [expiry, setExpiry] = useState<{ user: StaffMember; value: string } | null>(null);
@@ -131,17 +145,34 @@ export default function StaffPage() {
     setPending(true);
     setFormError(null);
     try {
-      const r = await api<{ id: string; tempPassword: string }>("/staff", {
+      const r = await api<{ id: string; tempPassword: string; username: string }>("/staff", {
         method: "POST",
-        body: { name: form.name.trim(), email: form.email.trim(), role: form.role },
+        body: { name: form.name.trim(), email: form.email.trim(), role: form.role, username: form.username.trim() || undefined },
       });
+      setTempForName(form.name.trim());
+      setTempUsername(r.username);
       setTempPassword(r.tempPassword);
-      setForm({ name: "", email: "", role: "cashier" });
+      setForm({ name: "", email: "", role: "cashier", username: "" });
+      setCreateOpen(false);
       load();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "We couldn't create the account. Please try again.");
     } finally {
       setPending(false);
+    }
+  }
+
+  async function switchAccount() {
+    if (!switchFor) return;
+    setSwitchPending(true);
+    try {
+      await api("/staff/impersonation/start", { method: "POST", body: { userId: switchFor.id } });
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.assign("/dashboard");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "We couldn't switch into that account. Please try again.");
+      setSwitchPending(false);
+      setSwitchFor(null);
     }
   }
 
@@ -169,9 +200,10 @@ export default function StaffPage() {
         await api(`/staff/${user.id}`, { method: "DELETE" });
         toast.success(`${user.name} deleted`);
       } else {
-        const r = await api<{ tempPassword: string }>(`/staff/${user.id}/reset-password`, { method: "POST" });
+        const r = await api<{ tempPassword: string; username: string | null }>(`/staff/${user.id}/reset-password`, { method: "POST" });
+        setTempForName(user.name);
+        setTempUsername(r.username ?? user.username);
         setTempPassword(r.tempPassword);
-        toast.success("Password reset — share the new temporary password now");
       }
       load();
     } catch (err) {
@@ -219,6 +251,7 @@ export default function StaffPage() {
                     <TableCell className="pl-4">
                       <p className="max-w-44 truncate font-medium" title={u.name}>{u.name}</p>
                       <p className="max-w-44 truncate text-xs text-muted-foreground" title={u.email}>{u.email}</p>
+                      {u.username ? <p className="max-w-44 truncate font-mono text-[11px] text-muted-foreground" title={`Username: ${u.username}`}>@{u.username}</p> : null}
                     </TableCell>
                     <TableCell>
                       <NativeSelect
@@ -255,6 +288,10 @@ export default function StaffPage() {
                       })()}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        <span className={`size-2 shrink-0 rounded-full ${u.online ? "bg-emerald-500" : "bg-muted-foreground/30"}`} aria-hidden />
+                        {u.online ? <span className="font-medium text-emerald-600">Online now</span> : <span className="truncate">{u.lastSeenAt ? `Last seen ${formatDateTime(u.lastSeenAt)}` : "Never seen"}</span>}
+                      </span>
                       <span className="block truncate">{u.lastSignInAt ? formatDateTime(u.lastSignInAt) : "Never"}</span>
                       <span className="block truncate text-[11px]">
                         PW {u.passwordChangedAt ? `set ${formatDateTime(u.passwordChangedAt)}` : "age unknown"}
@@ -262,6 +299,9 @@ export default function StaffPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="inline-flex items-center gap-1">
+                        {meId !== u.id ? (
+                          <Button variant="ghost" size="icon-sm" aria-label="Sign in as this account" title="Sign in as this account" onClick={() => setSwitchFor(u)}><LogInIcon /></Button>
+                        ) : null}
                         <Button variant="ghost" size="icon-sm" aria-label="Reset password" title="Reset password" onClick={() => setConfirm({ user: u, action: "reset" })}><KeyRoundIcon /></Button>
                         {u.status === "active" ? (
                           <Button variant="ghost" size="icon-sm" aria-label="Deactivate" title="Deactivate" onClick={() => setConfirm({ user: u, action: "deactivate" })}><UserXIcon /></Button>
@@ -346,18 +386,7 @@ export default function StaffPage() {
               <DialogTitle>Add staff account</DialogTitle>
               <DialogDescription>A temporary password is generated and shown once — share it with the staff member in person.</DialogDescription>
             </DialogHeader>
-            {tempPassword ? (
-              <div className="flex flex-col gap-3">
-                <p className="text-sm text-muted-foreground">Account created. Give them this temporary password — it will not be shown again:</p>
-                <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
-                  <code className="flex-1 break-all font-mono text-sm">{tempPassword}</code>
-                  <Button variant="outline" size="icon-sm" aria-label="Copy temporary password" onClick={() => navigator.clipboard?.writeText(tempPassword).then(() => toast.success("Copied"))}><CopyIcon /></Button>
-                </div>
-                <DialogFooter>
-                  <Button onClick={() => { setCreateOpen(false); setTempPassword(null); }}>Done</Button>
-                </DialogFooter>
-              </div>
-            ) : (
+            {(
               <form onSubmit={createStaff} className="flex flex-col gap-3">
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="staff-name">Full name <span className="text-destructive">*</span></Label>
@@ -366,6 +395,11 @@ export default function StaffPage() {
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="staff-email">Email <span className="text-destructive">*</span></Label>
                   <Input id="staff-email" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} required placeholder="name@clothflow.store" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="staff-username">Username</Label>
+                  <Input id="staff-username" autoComplete="off" value={form.username} onChange={(e) => setForm((f) => ({ ...f, username: e.target.value.toLowerCase().replace(/[^a-z0-9._-]/g, "") }))} placeholder="Leave empty — we'll suggest one" />
+                  <p className="text-[11px] text-muted-foreground">Staff sign in with their username or email. Leave blank and we will create one from their name.</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="staff-role">Role</Label>
@@ -383,6 +417,39 @@ export default function StaffPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Temporary password — shown once, to the owner, right after it is generated */}
+        <Dialog open={tempPassword !== null} onOpenChange={(open) => { if (!open) setTempPassword(null); }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Temporary password for {tempForName ?? "the account"}</DialogTitle>
+              <DialogDescription>
+                Share it now — it cannot be shown again. {tempUsername ? <span>They sign in with username <strong>{tempUsername}</strong> (or their email).</span> : null}
+              </DialogDescription>
+            </DialogHeader>
+            {tempPassword ? (
+              <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+                <code className="flex-1 break-all font-mono text-base font-semibold">{tempPassword}</code>
+                <Button variant="outline" size="icon-sm" aria-label="Copy temporary password" onClick={() => navigator.clipboard?.writeText(tempPassword).then(() => toast.success("Copied"))}><CopyIcon /></Button>
+              </div>
+            ) : null}
+            <DialogFooter>
+              <Button onClick={() => setTempPassword(null)}>Done</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Switch into another account */}
+        <ConfirmDialog
+          open={switchFor !== null}
+          onOpenChange={(open) => { if (!open && !switchPending) setSwitchFor(null); }}
+          title={`Sign in as ${switchFor?.name ?? "this account"}?`}
+          description="You'll act as them on the till and see what they see. An amber banner shows whose account you're in — use “Switch back” there to return to your owner account at any time."
+          confirmLabel="Switch account"
+          pending={switchPending}
+          icon={<LogInIcon aria-hidden />}
+          onConfirm={switchAccount}
+        />
 
         {/* Confirmation dialog */}
         <Dialog open={confirm !== null} onOpenChange={(open) => { if (!open) setConfirm(null); }}>

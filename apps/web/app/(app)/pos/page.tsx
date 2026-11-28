@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError, formatRWF, formatDateTime } from "@/lib/api";
+import { normalizePhone } from "@/lib/phone";
+import { PhoneInput } from "@/components/phone-input";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -224,13 +226,23 @@ export default function PosPage() {
 
   async function confirmSale() {
     setError(null);
+    const phoneResult = customerPhone.trim() ? normalizePhone(customerPhone) : null;
+    if (phoneResult && !phoneResult.ok) {
+      setError(phoneResult.message ?? "Customer phone isn't valid.");
+      return;
+    }
+    const invalidPayment = payments.find((p) => p.amount.trim() !== "" && Number(p.amount) < 0);
+    if (invalidPayment) {
+      setError("Payment amounts can't be negative.");
+      return;
+    }
     setSubmitting(true);
     try {
       const result = await api<CompletedSale>("/sales", {
         method: "POST",
         idempotencyKey: idempotencyKey.current,
         body: {
-          customerPhone: customerPhone.trim() || null,
+          customerPhone: phoneResult?.value ?? null,
           items: cart.map((l) => ({ variantId: l.variantId, quantity: l.qty })),
           discountTotal: discountValue,
           payments: payments
@@ -353,7 +365,7 @@ export default function PosPage() {
                     inputMode="numeric"
                     placeholder="0"
                     value={payment.amount}
-                    onChange={(e) => updatePayment(payment.id, { amount: e.target.value })}
+                    onChange={(e) => updatePayment(payment.id, { amount: e.target.value.replace(/[^\d.]/g, "") })}
                   />
                   <Input
                     className="col-span-3"
@@ -537,13 +549,13 @@ export default function PosPage() {
           <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span className="tabular-nums">{formatRWF(subtotal)}</span></div>
           <div className="flex items-center justify-between gap-2">
             <Label htmlFor="discount" className="text-muted-foreground">Discount (RWF)</Label>
-            <Input id="discount" className="h-7 w-28 text-right tabular-nums" inputMode="numeric" placeholder="0" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+            <Input id="discount" className="h-7 w-28 text-right tabular-nums" inputMode="numeric" placeholder="0" value={discount} onChange={(e) => setDiscount(e.target.value.replace(/[^\d]/g, ""))} />
           </div>
           <div className="flex justify-between text-base font-semibold"><span>Payable</span><span className="tabular-nums">{formatRWF(total)}</span></div>
         </div>
         <div className="mt-2">
           <Label htmlFor="customer" className="text-xs text-muted-foreground">Customer phone (optional)</Label>
-          <Input id="customer" inputMode="tel" placeholder="+250 788 000 000" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} className="mt-1 h-9" />
+          <PhoneInput id="customer" value={customerPhone} onValueChange={setCustomerPhone} className="mt-1 h-9" />
         </div>
         <Button className="mt-3 w-full" size="lg" disabled={cart.length === 0} onClick={() => setStep("payment")}>
           Proceed to payment <ChevronRightIcon aria-hidden />

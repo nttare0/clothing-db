@@ -62,7 +62,7 @@ function SignInForm() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-background px-4 py-10">
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-background px-4 py-10">
       <div className="flex items-center gap-2.5">
         <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
           <ShirtIcon className="size-6" aria-hidden />

@@ -70,7 +70,7 @@ authRoutes.post(
         );
       }
       return c.json(
-        { error: { code: "INVALID_CREDENTIALS", message: `Invalid email or password. ${failure.remaining} attempt${failure.remaining === 1 ? "" : "s"} left before a 1-minute lock.`, requestId: c.get("requestId"), attemptsLeft: failure.remaining } },
+        { error: { code: "INVALID_CREDENTIALS", message: `Invalid email/username or password. ${failure.remaining} attempt${failure.remaining === 1 ? "" : "s"} left before a 1-minute lock.`, requestId: c.get("requestId"), attemptsLeft: failure.remaining } },
         400,
       );
     }
@@ -106,12 +106,20 @@ authRoutes.post("/signout", async (c) => {
 
 authRoutes.get("/me", requireAuth, async (c) => {
   const user = c.get("user");
-  const rows = await sql<{ id: string; name: string | null; email: string; role: string; created_at: string }[]>`
-    SELECT id, name, email, role, created_at FROM users WHERE id = ${user.id} LIMIT 1
+  const rows = await sql<{ id: string; name: string | null; email: string; role: string; username: string | null; created_at: string }[]>`
+    SELECT id, name, email, role, username, created_at FROM users WHERE id = ${user.id} LIMIT 1
   `;
   const row = rows[0];
   if (!row) return fail(c, 401, "SESSION_EXPIRED", "Your session has expired. Sign in again.");
-  return ok(c, { id: row.id, name: row.name, email: row.email, role: row.role, createdAt: row.created_at });
+  return ok(c, {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    username: row.username,
+    createdAt: row.created_at,
+    impersonation: user.impersonatedBy ? { byName: user.impersonatedBy.name } : null,
+  });
 });
 
 authRoutes.post(

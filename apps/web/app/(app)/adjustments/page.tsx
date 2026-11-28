@@ -7,7 +7,6 @@ import { api, ApiError, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { RoleGate } from "@/components/role-gate";
@@ -22,6 +21,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/search-input";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { Trash2Icon } from "lucide-react";
 
 type SearchResult = {
   variantId: string;
@@ -64,6 +65,23 @@ export default function AdjustmentsPage() {
   const [pending, setPending] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [recent, setRecent] = useState<AdjustmentRow[] | null>(null);
+  const [deleteFor, setDeleteFor] = useState<AdjustmentRow | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
+
+  async function confirmDelete() {
+    if (!deleteFor) return;
+    setDeletePending(true);
+    try {
+      await api(`/adjustments/${deleteFor.id}`, { method: "DELETE" });
+      toast.success("Adjustment removed and its stock effect reversed");
+      setDeleteFor(null);
+      loadRecent();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "We couldn't remove the adjustment. Nothing was changed.");
+    } finally {
+      setDeletePending(false);
+    }
+  }
 
   const search = useCallback(() => {
     const q = query.trim();
@@ -209,7 +227,7 @@ export default function AdjustmentsPage() {
                       ) : null}
                       <div className="flex-1">
                         <Label htmlFor="quantity">Quantity</Label>
-                        <Input id="quantity" type="number" inputMode="numeric" min={1} step={1} value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
+                        <Input id="quantity" type="number" inputMode="numeric" min={1} step={1} value={quantity} onChange={(e) => setQuantity(e.target.value.replace(/[^\d]/g, ""))} required />
                       </div>
                     </div>
                   </div>
@@ -250,6 +268,7 @@ export default function AdjustmentsPage() {
                       <TableHead>Item</TableHead>
                       <TableHead className="text-right">Δ</TableHead>
                       <TableHead>Reason</TableHead>
+                      <TableHead className="w-12"><span className="sr-only">Actions</span></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -267,6 +286,9 @@ export default function AdjustmentsPage() {
                           <Badge variant="outline" className="mr-1 text-[9px] uppercase">{row.type}</Badge>
                           {row.reason}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon-sm" aria-label="Remove adjustment" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteFor(row)}><Trash2Icon /></Button>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -276,6 +298,15 @@ export default function AdjustmentsPage() {
           </Card>
         </div>
       </div>
+      <ConfirmDialog
+        open={deleteFor !== null}
+        onOpenChange={(open) => { if (!open) setDeleteFor(null); }}
+        title="Remove this adjustment?"
+        description="The adjustment will be deleted and its effect on stock reversed exactly (found stock is removed, a loss is returned to on-hand). If later counts or sales depend on it, you'll be asked to count the shelf first."
+        confirmLabel="Remove adjustment"
+        pending={deletePending}
+        onConfirm={confirmDelete}
+      />
     </RoleGate>
   );
 }

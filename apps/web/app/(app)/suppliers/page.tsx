@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { TruckIcon, PlusIcon, PencilIcon, ArchiveIcon, HistoryIcon } from "lucide-react";
+import { PlusIcon, PencilIcon, ArchiveIcon, HistoryIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { api, ApiError, formatRWF, formatDateTime } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,8 @@ import {
 import { ErrorAlert, EmptyState } from "@/components/state";
 import { RoleGate } from "@/components/role-gate";
 import { SearchInput } from "@/components/search-input";
+import { PhoneInput } from "@/components/phone-input";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 type Supplier = {
   id: string;
@@ -57,6 +59,8 @@ const emptyForm = { name: "", contactName: "", phone: "", email: "", address: ""
 export default function SuppliersPage() {
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [deleteFor, setDeleteFor] = useState<Supplier | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
   const [items, setItems] = useState<Supplier[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,6 +160,21 @@ export default function SuppliersPage() {
     }
   }
 
+  async function confirmDelete() {
+    if (!deleteFor) return;
+    setDeletePending(true);
+    try {
+      await api(`/suppliers/${deleteFor.id}`, { method: "DELETE" });
+      toast.success("Supplier deleted");
+      setDeleteFor(null);
+      load();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "We couldn't delete the supplier. Archive it instead.");
+    } finally {
+      setDeletePending(false);
+    }
+  }
+
   return (
     <RoleGate allow={["owner", "manager"]}>
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4 sm:p-6">
@@ -223,6 +242,7 @@ export default function SuppliersPage() {
                         <Button variant="ghost" size="icon-sm" aria-label="Purchase history" title="Purchase history" onClick={() => openHistory(s)}><HistoryIcon /></Button>
                         <Button variant="ghost" size="icon-sm" aria-label="Edit supplier" onClick={() => openEdit(s)}><PencilIcon /></Button>
                         <Button variant="ghost" size="icon-sm" aria-label={s.status === "active" ? "Archive supplier" : "Reactivate supplier"} onClick={() => toggleArchive(s)}><ArchiveIcon /></Button>
+                        <Button variant="ghost" size="icon-sm" aria-label="Delete supplier" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setDeleteFor(s)}><Trash2Icon /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -251,7 +271,7 @@ export default function SuppliersPage() {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="sup-phone">Phone</Label>
-                  <Input id="sup-phone" inputMode="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+250 788 000 000" />
+                  <PhoneInput id="sup-phone" value={form.phone} onValueChange={(v) => setForm((f) => ({ ...f, phone: v }))} />
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
@@ -304,6 +324,15 @@ export default function SuppliersPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        <ConfirmDialog
+          open={deleteFor !== null}
+          onOpenChange={(open) => { if (!open) setDeleteFor(null); }}
+          title="Delete supplier?"
+          description={deleteFor ? (deleteFor.purchaseCount > 0 ? `${deleteFor.name} has ${deleteFor.purchaseCount} purchase record${deleteFor.purchaseCount === 1 ? "" : "s"} — suppliers with purchase history can only be archived.` : `${deleteFor.name} will be removed permanently.`) : ""}
+          pending={deletePending}
+          onConfirm={confirmDelete}
+        />
       </div>
     </RoleGate>
   );

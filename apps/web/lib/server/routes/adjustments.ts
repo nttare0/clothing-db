@@ -3,13 +3,13 @@ import { z } from "zod";
 import { sql } from "../db";
 import { audit, fail, ok, requireAuth, requirePermission } from "../http";
 import { zValidator } from "@hono/zod-validator";
-import { hook } from "../validate";
+import { hook, uuidLike } from "../validate";
 
 // ---------- Adjustments: losses, damage, found stock, corrections ----------
 export const adjustmentRoutes = new Hono();
 
 const adjustmentBody = z.object({
-  variantId: z.string().uuid(),
+  variantId: uuidLike,
   kind: z.enum(["loss", "damage", "found", "correction"]),
   quantity: z.number().int().positive("Quantity must be a positive integer.").max(1_000_000),
   // correction only: direction of the count difference
@@ -144,6 +144,72 @@ class AdjustmentError extends Error {
   }
 }
 
+adjustmentRoutes.delete("/:id", requireAuth, requirePermission("adjustments.manage"), async (c) => {
+  const id = c.req.param("id");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return fail(c, 400, "VALIDATION", "We couldn't tell which adjustment that is.");
+  }
+  const user = c.get("user");
+
+  try {
+    const result = await sql.begin(async (tx) => {
+      const rows = await tx<
+        { id: string; variant_id: string; on_hand_delta: number; damaged_delta: number; source_type: string }[]
+      >`
+        SELECT id, variant_id, on_hand_delta, damaged_delta, source_type
+        FROM stock_movements
+        WHERE id = ${id}
+        LIMIT 1
+        FOR UPDATE
+      `;
+      const movement = rows[0];
+      if (!movement || movement.source_type !== "adjustment") {
+        throw new AdjustmentError(404, "NOT_FOUND", "We couldn't find that adjustment.");
+      }
+      const balances = await tx<
+        { quantity_on_hand: number; quantity_reserved: number; quantity_damaged: number; quantity_quarantined: number }[]
+      >`
+        SELECT quantity_on_hand, quantity_reserved, quantity_damaged, quantity_quarantined
+        FROM inventory_balances
+        WHERE variant_id = ${movement.variant_id}
+        FOR UPDATE
+      `;
+      const b = balances[0];
+      if (!b) throw new AdjustmentError(404, "VARIANT_NOT_FOUND", "That variant no longer exists.");
+
+      // Reverse the adjustment exactly.
+      const newOnHand = b.quantity_on_hand - movement.on_hand_delta;
+      const newDamaged = b.quantity_damaged - movement.damaged_delta;
+      if (newOnHand < 0) {
+        throw new AdjustmentError(409, "INSUFFICIENT_STOCK", "Removing this adjustment would make on-hand negative. Count the shelf first, then try again.");
+      }
+      if (newDamaged < 0) {
+        throw new AdjustmentError(409, "INSUFFICIENT_STOCK", "Removing this adjustment would make the damaged bucket negative — some damaged units were probably counted or sold since.");
+      }
+      if (newOnHand < b.quantity_reserved + newDamaged + b.quantity_quarantined) {
+        throw new AdjustmentError(409, "RESERVED_EXCEEDS", "Removing this adjustment would leave on-hand below the reserved/damaged/quarantined units.");
+      }
+
+      await tx`
+        UPDATE inventory_balances
+        SET quantity_on_hand = ${newOnHand}, quantity_damaged = ${newDamaged}, updated_at = now()
+        WHERE variant_id = ${movement.variant_id}
+      `;
+      await tx`DELETE FROM stock_movements WHERE id = ${id}`;
+      return { variantId: movement.variant_id };
+    });
+
+    await audit(user.id, "stock.adjustment_delete", "variant", result.variantId, {
+      before: { movementId: id },
+      requestId: c.get("requestId"),
+    });
+    return ok(c, { id });
+  } catch (err) {
+    if (err instanceof AdjustmentError) return fail(c, err.status, err.code, err.message);
+    throw err;
+  }
+});
+
 // ---------- Physical stock count ----------
 export const countRoutes = new Hono();
 
@@ -153,7 +219,7 @@ const countBody = z.object({
   items: z
     .array(
       z.object({
-        variantId: z.string().uuid(),
+        variantId: uuidLike,
         counted: z.number().int().min(0, "Counted units cannot be negative.").max(10_000_000),
       }),
     )

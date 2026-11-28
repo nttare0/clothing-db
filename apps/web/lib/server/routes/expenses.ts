@@ -164,3 +164,22 @@ expenseRoutes.patch(
     return ok(c, { id });
   },
 );
+
+expenseRoutes.delete("/:id", requireAuth, requirePermission("expenses.manage"), async (c) => {
+  const id = c.req.param("id");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return fail(c, 400, "VALIDATION", "We couldn't tell which expense that is.");
+  }
+  const user = c.get("user");
+  const existing = await sql<{ id: string; category: string; amount: string }[]>`
+    SELECT id, category, amount::text FROM expenses WHERE id = ${id} LIMIT 1
+  `;
+  const target = existing[0];
+  if (!target) return fail(c, 404, "NOT_FOUND", "Expense not found.");
+  await sql`DELETE FROM expenses WHERE id = ${id}`;
+  await audit(user.id, "expense.delete", "expense", id, {
+    before: { category: target.category, amount: Number(target.amount) },
+    requestId: c.get("requestId"),
+  });
+  return ok(c, { id });
+});
