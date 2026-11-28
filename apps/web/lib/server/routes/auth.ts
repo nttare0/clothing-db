@@ -23,6 +23,12 @@ import { hook } from "../validate";
 
 export const authRoutes = new Hono();
 
+
+/** Best-effort client IP for rate limiting (Vercel sets x-forwarded-for). */
+function clientIp(c: { req: { header: (name: string) => string | undefined } }): string {
+  return c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+}
+
 authRoutes.post(
   "/signin",
   zValidator("json",
@@ -34,6 +40,12 @@ authRoutes.post(
   async (c) => {
     const { identifier, password } = c.req.valid("json");
     const key = identifier.toLowerCase();
+    const ip = clientIp(c);
+
+    // IP throttling first — stops password-guessing across many accounts at once.
+    if (!rateLimit(`signin-ip:${ip}`, 30, 15 * 60_000)) {
+      return fail(c, 429, "RATE_LIMITED", "Too many sign-in attempts. Wait a few minutes and try again.");
+    }
 
     // Account lockout: 5 wrong passwords locks this account for 60 seconds.
     const lockSeconds = signinLockSeconds(key);
@@ -162,6 +174,10 @@ authRoutes.post(
   async (c) => {
     const { email } = c.req.valid("json");
     const key = email.toLowerCase();
+    const ip = clientIp(c);
+    if (!rateLimit(`forgot-ip:${ip}`, 10, 15 * 60_000)) {
+      return fail(c, 429, "RATE_LIMITED", "Too many attempts. Try again later.");
+    }
     if (!rateLimit(`forgot:${key}`, 5, 15 * 60_000)) {
       return fail(c, 429, "RATE_LIMITED", "Too many attempts. Try again later.");
     }
@@ -222,7 +238,7 @@ authRoutes.post(
   ),
   async (c) => {
     const { token, password } = c.req.valid("json");
-    const ip = c.req.header("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = clientIp(c);
     if (!rateLimit(`reset:${ip}`, 10, 15 * 60_000)) {
       return fail(c, 429, "RATE_LIMITED", "Too many attempts. Try again later.");
     }

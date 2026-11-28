@@ -92,6 +92,40 @@ const NAV: { group: string; items: NavItem[] }[] = [
 
 type Me = { name: string | null; email: string; role: string | null; impersonation?: { byName: string | null } | null };
 
+const PAGE_TITLES: Record<string, string> = {
+  "/dashboard": "Dashboard",
+  "/inventory": "Inventory",
+  "/products/new": "Add product",
+  "/categories": "Categories",
+  "/pos": "Point of sale",
+  "/sales": "Sales",
+  "/returns": "Returns",
+  "/returns/new": "New return",
+  "/stock-in": "Stock in",
+  "/stock-in/new": "Receive stock",
+  "/stock-movements": "Stock movements",
+  "/stock-count": "Stock count",
+  "/adjustments": "Adjustments",
+  "/reports": "Reports",
+  "/customers": "Customers",
+  "/suppliers": "Suppliers",
+  "/expenses": "Expenses",
+  "/staff": "Staff",
+  "/settings": "Settings",
+  "/audit-logs": "Audit log",
+  "/export": "Export data",
+  "/notifications": "Notifications",
+  "/profile": "My profile",
+};
+
+function titleFor(pathname: string): string {
+  if (PAGE_TITLES[pathname]) return PAGE_TITLES[pathname];
+  if (/^\/products\/[^/]+\/edit$/.test(pathname)) return "Edit product";
+  if (/^\/products\/[^/]+$/.test(pathname)) return "Product";
+  if (/^\/sales\/[^/]+$/.test(pathname)) return "Sale receipt";
+  return "ClothFlow";
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -131,6 +165,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       for (const event of events) window.removeEventListener(event, schedule);
     };
   }, []);
+
+  // Unique browser-tab title per screen (authenticated pages are noindex,
+  // so titles exist for people, not crawlers).
+  useEffect(() => {
+    document.title = `${titleFor(pathname)} · ClothFlow`;
+  }, [pathname]);
 
   useEffect(() => {
     api<Me>("/auth/me")
